@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import yahooFinance from 'yahoo-finance2';
+import { YahooQuote } from '@/lib/types';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -27,8 +28,12 @@ export async function GET(request: Request) {
       const symbols = holdings.map(h => h.symbol);
       try {
         const quotes = await yahooFinance.quote(symbols);
-        // @ts-ignore
         const quotesArray: any[] = Array.isArray(quotes) ? quotes : [quotes];
+//         const quote = await yahooFinance.quote(holding.symbol) as YahooQuote;
+//         const currentPrice = quote.regularMarketPrice || holding.average_price;
+        const totalValue = currentPrice * holding.shares;
+        const returnVal = totalValue - (holding.average_price * holding.shares);
+        const returnPct = (currentPrice - holding.average_price) / holding.average_price * 100;
 
         enhancedHoldings = holdings.map((holding) => {
            const quote = quotesArray.find((q: any) => q.symbol === holding.symbol);

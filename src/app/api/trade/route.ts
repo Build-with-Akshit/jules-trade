@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import yahooFinance from 'yahoo-finance2';
+import { YahooQuote } from '@/lib/types';
 
 export async function POST(request: Request) {
   try {
@@ -11,8 +12,7 @@ export async function POST(request: Request) {
     }
 
     // Get current market price
-    const quote = await yahooFinance.quote(symbol);
-    // @ts-ignore
+    const quote = await yahooFinance.quote(symbol) as YahooQuote;
     const currentPrice = quote.regularMarketPrice;
 
     if (!currentPrice) {
