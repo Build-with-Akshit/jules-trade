@@ -4,10 +4,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, ArrowLeft, Send, Settings, Check, ChevronDown, ChevronUp } from 'lucide-react';
 
+interface Message {
+  id?: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export default function Course() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [messages, setMessages] = useState<any[]>([
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
@@ -158,7 +164,7 @@ export default function Course() {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const newMsg = { id: Date.now().toString(), role: 'user', content: input };
+    const newMsg: Message = { id: Date.now().toString(), role: 'user', content: input };
     setMessages(prev => [...prev, newMsg]);
     setInput('');
     setIsLoading(true);
@@ -306,7 +312,7 @@ export default function Course() {
                 </div>
             )}
 
-            {messages.map((m: any) => (
+            {messages.map((m) => (
                 <div key={m.id} className={`mb-4 flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
                     m.role === 'user'
