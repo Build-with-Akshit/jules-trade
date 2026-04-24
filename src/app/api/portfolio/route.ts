@@ -29,11 +29,6 @@ export async function GET(request: Request) {
       try {
         const quotes = await yahooFinance.quote(symbols);
         const quotesArray: any[] = Array.isArray(quotes) ? quotes : [quotes];
-//         const quote = await yahooFinance.quote(holding.symbol) as YahooQuote;
-        const currentPrice = quote.regularMarketPrice || holding.average_price;
-        const totalValue = currentPrice * holding.shares;
-        const returnVal = totalValue - (holding.average_price * holding.shares);
-        const returnPct = (currentPrice - holding.average_price) / holding.average_price * 100;
 
         enhancedHoldings = holdings.map((holding) => {
            const quote = quotesArray.find((q: any) => q.symbol === holding.symbol);
