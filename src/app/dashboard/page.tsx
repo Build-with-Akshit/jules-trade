@@ -25,6 +25,13 @@ export default function Dashboard() {
     const parsed = JSON.parse(savedUser);
     setUser(parsed);
     fetchPortfolio(parsed.id);
+
+    // Check if we came from the Explore page
+    const preselect = localStorage.getItem('preselect_asset');
+    if (preselect) {
+      selectAsset(preselect);
+      localStorage.removeItem('preselect_asset');
+    }
   }, [router]);
 
   const fetchPortfolio = async (userId: number) => {

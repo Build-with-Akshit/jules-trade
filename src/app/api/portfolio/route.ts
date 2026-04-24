@@ -22,32 +22,45 @@ export async function GET(request: Request) {
     const portfolioStmt = db.prepare('SELECT symbol, shares, average_price FROM portfolio WHERE user_id = ?');
     const holdings = portfolioStmt.all(userId) as Array<{symbol: string, shares: number, average_price: number}>;
 
-    // Enhance holdings with current market data
-    const enhancedHoldings = await Promise.all(holdings.map(async (holding) => {
+    // Enhance holdings with current market data in a single batch call to prevent rate limiting
+    let enhancedHoldings: any[] = [];
+    if (holdings.length > 0) {
+      const symbols = holdings.map(h => h.symbol);
       try {
-        const quote = await yahooFinance.quote(holding.symbol) as YahooQuote;
-        const currentPrice = quote.regularMarketPrice || holding.average_price;
+        const quotes = await yahooFinance.quote(symbols);
+        const quotesArray: any[] = Array.isArray(quotes) ? quotes : [quotes];
+//         const quote = await yahooFinance.quote(holding.symbol) as YahooQuote;
+//         const currentPrice = quote.regularMarketPrice || holding.average_price;
         const totalValue = currentPrice * holding.shares;
         const returnVal = totalValue - (holding.average_price * holding.shares);
         const returnPct = (currentPrice - holding.average_price) / holding.average_price * 100;
 
-        return {
-          ...holding,
-          currentPrice,
-          totalValue,
-          return: returnVal,
-          returnPct
-        };
+        enhancedHoldings = holdings.map((holding) => {
+           const quote = quotesArray.find((q: any) => q.symbol === holding.symbol);
+           const currentPrice = quote?.regularMarketPrice || holding.average_price;
+           const totalValue = currentPrice * holding.shares;
+           const returnVal = totalValue - (holding.average_price * holding.shares);
+           const returnPct = (currentPrice - holding.average_price) / holding.average_price * 100;
+
+           return {
+             ...holding,
+             currentPrice,
+             totalValue,
+             return: returnVal,
+             returnPct
+           };
+        });
       } catch (err) {
-        return {
-          ...holding,
-          currentPrice: holding.average_price,
-          totalValue: holding.average_price * holding.shares,
-          return: 0,
-          returnPct: 0
-        };
+         // Fallback if batch fetch fails
+         enhancedHoldings = holdings.map(holding => ({
+            ...holding,
+            currentPrice: holding.average_price,
+            totalValue: holding.average_price * holding.shares,
+            return: 0,
+            returnPct: 0
+         }));
       }
-    }));
+    }
 
     const transactionsStmt = db.prepare('SELECT symbol, type, shares, price, timestamp FROM transactions WHERE user_id = ? ORDER BY timestamp DESC LIMIT 10');
     const transactions = transactionsStmt.all(userId);
