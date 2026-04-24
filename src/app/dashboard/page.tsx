@@ -39,6 +39,30 @@ export default function Dashboard() {
     }
   };
 
+  // Real-time polling effect
+  useEffect(() => {
+    if (!user) return;
+
+    const intervalId = setInterval(() => {
+      // Refresh portfolio silently
+      fetchPortfolio(user.id);
+
+      // Refresh selected asset silently
+      if (selectedAsset) {
+        fetch(`/api/market/quote?symbol=${selectedAsset.symbol}`)
+          .then(res => res.json())
+          .then(data => {
+            if (!data.error) {
+              setSelectedAsset(data);
+            }
+          })
+          .catch(err => console.error("Real-time quote error:", err));
+      }
+    }, 5000); // Update every 5 seconds for a real-time feel
+
+    return () => clearInterval(intervalId);
+  }, [user, selectedAsset]);
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery) return;
@@ -126,17 +150,21 @@ export default function Dashboard() {
 
         {/* Top Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500 relative">
             <h3 className="text-sm font-medium text-gray-500">Total Account Value</h3>
-            <p className="mt-2 text-3xl font-bold text-gray-900">${portfolio?.totalValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
+            <p className="mt-2 text-3xl font-bold text-gray-900 transition-colors">${portfolio?.totalValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
+            <span className="absolute top-4 right-4 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+            </span>
           </div>
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500 relative">
             <h3 className="text-sm font-medium text-gray-500">Available Cash</h3>
             <p className="mt-2 text-3xl font-bold text-gray-900">${portfolio?.balance?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
-            <h3 className="text-sm font-medium text-gray-500">Invested Value</h3>
-            <p className="mt-2 text-3xl font-bold text-gray-900">${portfolio?.portfolioValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500 relative">
+            <h3 className="text-sm font-medium text-gray-500">Invested Value (Live)</h3>
+            <p className="mt-2 text-3xl font-bold text-gray-900 transition-colors">${portfolio?.portfolioValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
           </div>
         </div>
 
@@ -180,10 +208,11 @@ export default function Dashboard() {
                     <div>
                       <h3 className="text-2xl font-bold">{selectedAsset.symbol}</h3>
                       <p className="text-gray-600">{selectedAsset.shortName || selectedAsset.longName}</p>
+                      <span className="text-xs text-blue-600 font-medium px-2 py-1 bg-blue-50 rounded-full inline-block mt-2">🔴 Live</span>
                     </div>
                     <div className="text-right">
                       <p className="text-3xl font-bold">${selectedAsset.regularMarketPrice?.toFixed(2)}</p>
-                      <p className={`text-sm font-medium ${selectedAsset.regularMarketChange >= 0 ? 'text-green-600' : 'text-red-600'} flex items-center justify-end`}>
+                      <p className={`text-sm font-medium ${selectedAsset.regularMarketChange >= 0 ? 'text-green-600' : 'text-red-600'} flex items-center justify-end transition-colors`}>
                         {selectedAsset.regularMarketChange >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
                         {selectedAsset.regularMarketChange?.toFixed(2)} ({selectedAsset.regularMarketChangePercent?.toFixed(2)}%)
                       </p>
