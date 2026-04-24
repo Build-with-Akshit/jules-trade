@@ -92,7 +92,7 @@ Never give actual financial advice; remind them this is a paper trading learning
 
     } catch (apiErr: any) {
          console.error('API Provider Error:', apiErr.message);
-         return NextResponse.json({ error: `AI Provider Error: ${apiErr.message}. Please check your API key.` }, { status: 400 });
+         return NextResponse.json({ error: 'AI Provider Error occurred. Please check your API key.' }, { status: 400 });
     }
 
   } catch (error: any) {
