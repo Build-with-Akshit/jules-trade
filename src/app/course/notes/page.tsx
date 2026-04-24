@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowLeft, ChevronDown, ChevronUp, Brain, TrendingUp, Globe, Coins, Shield, Target } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Brain, TrendingUp, Globe, Coins, Shield, Target } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function NotesPage() {

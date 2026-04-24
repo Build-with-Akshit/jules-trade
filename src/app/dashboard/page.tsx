@@ -185,7 +185,7 @@ export default function Dashboard() {
 
         {/* Top Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6 border-l-4 border-b dark:border-gray-700lue-500 relative">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6 border-l-4 border-blue-500 relative">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Account Value</h3>
             <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white transition-colors">${portfolio?.totalValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
             <span className="absolute top-4 right-4 flex h-3 w-3" title="Real-time syncing">
@@ -217,7 +217,7 @@ export default function Dashboard() {
                   value={searchQuery}
                   onChange={handleSearchChange}
                   placeholder="Search symbol or company (e.g., AAPL, BTC-USD)"
-                  className="w-full pl-10 pr-4 py-2 border rounded-md text-black focus:ring-blue-500 focus:border-b dark:border-gray-700lue-500"
+                  className="w-full pl-10 pr-4 py-2 border rounded-md text-black focus:ring-blue-500 focus:border-blue-500"
                   autoComplete="off"
                 />
                 <Search className="absolute left-3 w-5 h-5 text-gray-400" />
@@ -252,7 +252,7 @@ export default function Dashboard() {
                     <div>
                       <h3 className="text-2xl font-bold">{selectedAsset.symbol}</h3>
                       <p className="text-gray-600">{selectedAsset.shortName || selectedAsset.longName}</p>
-                      <span className="text-xs text-blue-600 font-medium px-2 py-1 bg-blue-50 rounded-full inline-block mt-2 border border-b dark:border-gray-700lue-100">🔴 Live Pricing</span>
+                      <span className="text-xs text-blue-600 font-medium px-2 py-1 bg-blue-50 rounded-full inline-block mt-2 border border-blue-100">🔴 Live Pricing</span>
                     </div>
                     <div className="text-right mt-1 mr-4">
                       <p className="text-3xl font-bold">${selectedAsset.regularMarketPrice?.toFixed(2)}</p>
@@ -272,7 +272,7 @@ export default function Dashboard() {
                         step="1"
                         value={tradeShares}
                         onChange={(e) => setTradeShares(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-b dark:border-gray-700lue-500 text-black"
+                        className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-black"
                       />
                     </div>
                     <div className="flex-1 pt-6 flex space-x-2">
