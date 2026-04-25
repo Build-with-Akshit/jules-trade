@@ -2,7 +2,16 @@ import Database from 'better-sqlite3';
 import path from 'path';
 
 // Connect to an in-memory or file-based database
-const dbPath = path.join(process.cwd(), 'paper-trading.sqlite');
+// Vercel serverless functions have a read-only filesystem except for /tmp
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+const isTest = process.env.NODE_ENV === 'test';
+
+const dbPath = isTest
+  ? ':memory:'
+  : isProduction
+    ? path.join('/tmp', 'paper-trading.sqlite')
+    : path.join(process.cwd(), 'paper-trading.sqlite');
+
 const db = new Database(dbPath);
 
 // Initialize database tables

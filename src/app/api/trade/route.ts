@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   try {
     const { userId, symbol, type, shares } = await request.json();
 
-    if (!userId || !symbol || !type || !shares || shares <= 0) {
+    if (!userId || !symbol || !type || !shares || shares <= 0 || !Number.isInteger(shares)) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
     }
 
