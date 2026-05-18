@@ -4,10 +4,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, ArrowLeft, Send, Settings, Check, ChevronDown, ChevronUp } from 'lucide-react';
 
+interface Message {
+  id?: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export default function Course() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [messages, setMessages] = useState<any[]>([
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
@@ -23,6 +29,7 @@ export default function Course() {
   const [showSettings, setShowSettings] = useState(false);
   const [provider, setProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
+  const [hasKey, setHasKey] = useState(false);
 
   // Course Content
   const [expandedModule, setExpandedModule] = useState<number | null>(0);
@@ -64,28 +71,100 @@ export default function Course() {
 
     // Load saved settings
     const savedProvider = localStorage.getItem('ai_provider');
-    const savedKey = localStorage.getItem('ai_key');
     if (savedProvider) setProvider(savedProvider);
-    if (savedKey) setApiKey(savedKey);
+
+    // Migrate insecure ai_key if it exists
+    const migrateKey = async () => {
+      const savedKey = localStorage.getItem('ai_key');
+      if (savedKey) {
+        try {
+          await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiKey: savedKey })
+          });
+          localStorage.removeItem('ai_key');
+          setHasKey(true);
+        } catch (e) {
+          console.error("Failed to migrate API key", e);
+        }
+      } else {
+        // Check if server already has the key cookie
+        try {
+          const res = await fetch('/api/settings');
+          const data = await res.json();
+          if (data.hasKey) {
+            setHasKey(true);
+          }
+        } catch (e) {
+          console.error("Failed to fetch settings", e);
+        }
+      }
+    };
+    migrateKey();
   }, [router]);
 
-  const saveSettings = () => {
+  const saveSettings = async () => {
     localStorage.setItem('ai_provider', provider);
-    localStorage.setItem('ai_key', apiKey);
-    setShowSettings(false);
 
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: `Settings saved! You are now using ${provider} for your mentor. How can I help you understand the course?`
-    }]);
+    // Only send apiKey if the user typed something in the input
+    const payload: any = {};
+    if (apiKey) {
+      payload.apiKey = apiKey;
+    }
+
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.hasKey !== undefined) {
+          setHasKey(data.hasKey);
+        }
+        setApiKey(''); // Clear from memory
+        setShowSettings(false);
+
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: `Settings saved! You are now using ${provider} for your mentor. How can I help you understand the course?`
+        }]);
+      }
+    } catch (e) {
+      console.error("Failed to save settings", e);
+    }
+  };
+
+  const clearApiKey = async () => {
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHasKey(false);
+        setApiKey(''); // Clear from memory
+        setShowSettings(false);
+
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: `API key removed.`
+        }]);
+      }
+    } catch (e) {
+      console.error("Failed to clear API key", e);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const newMsg = { id: Date.now().toString(), role: 'user', content: input };
+    const newMsg: Message = { id: Date.now().toString(), role: 'user', content: input };
     setMessages(prev => [...prev, newMsg]);
     setInput('');
     setIsLoading(true);
@@ -98,8 +177,7 @@ export default function Course() {
         body: JSON.stringify({
           messages: [...messages, newMsg],
           userId: user.id,
-          provider: provider,
-          apiKey: apiKey
+          provider: provider
         })
       });
 
@@ -188,6 +266,14 @@ export default function Course() {
               >
                 Save
               </button>
+              {hasKey && (
+                <button
+                  onClick={clearApiKey}
+                  className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 mt-2"
+                >
+                  Clear Key
+                </button>
+              )}
            </div>
         </div>
       )}
@@ -226,7 +312,7 @@ export default function Course() {
                 </div>
             )}
 
-            {messages.map((m: any) => (
+            {messages.map((m) => (
                 <div key={m.id} className={`mb-4 flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
                     m.role === 'user'
@@ -253,7 +339,7 @@ export default function Course() {
             <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={apiKey ? "Ask about the course..." : "Set API Key to ask questions..."}
+                placeholder={hasKey ? "Ask about the course..." : "Set API Key to ask questions..."}
                 className="w-full pl-4 pr-12 py-4 rounded-b-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-black bg-white"
                 disabled={isLoading}
             />
