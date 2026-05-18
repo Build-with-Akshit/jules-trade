@@ -19,6 +19,7 @@ vi.mock('@/lib/db', () => {
       transaction: vi.fn((cb) => {
         return () => cb();
       }),
+      // @ts-ignore
       prepare: (...args: any[]) => prepareMock(...args),
     },
   };
@@ -57,11 +58,13 @@ describe('Trade API Route - BUY logic', () => {
     const shares = 10;
     const currentPrice = 150;
 
+    // @ts-ignore
     quoteMock.mockResolvedValueOnce({ regularMarketPrice: currentPrice } as any);
 
     // Setup DB mock responses
     getMock.mockImplementation((...args) => {
-      const queryStr = prepareMock.mock.calls[prepareMock.mock.calls.length - 1][0] as string;
+      // @ts-ignore
+      const queryStr = String(prepareMock.mock.calls[prepareMock.mock.calls.length - 1][0]);
 
       if (queryStr.includes('SELECT balance FROM users')) {
         return { balance: 2000 }; // Ensure user has enough balance (10 * 150 = 1500)
@@ -105,10 +108,12 @@ describe('Trade API Route - BUY logic', () => {
     const shares = 5;
     const currentPrice = 150; // Total new value = 750
 
+    // @ts-ignore
     quoteMock.mockResolvedValueOnce({ regularMarketPrice: currentPrice } as any);
 
     getMock.mockImplementation((...args) => {
-      const queryStr = prepareMock.mock.calls[prepareMock.mock.calls.length - 1][0] as string;
+      // @ts-ignore
+      const queryStr = String(prepareMock.mock.calls[prepareMock.mock.calls.length - 1][0]);
       if (queryStr.includes('SELECT balance FROM users')) return { balance: 2000 };
       if (queryStr.includes('SELECT shares, average_price FROM portfolio')) {
         return { shares: 10, average_price: 100 }; // Existing 10 shares at $100
@@ -133,10 +138,12 @@ describe('Trade API Route - BUY logic', () => {
     const shares = 10;
     const currentPrice = 150; // Total needed = 1500
 
+    // @ts-ignore
     quoteMock.mockResolvedValueOnce({ regularMarketPrice: currentPrice } as any);
 
     getMock.mockImplementation((...args) => {
-      const queryStr = prepareMock.mock.calls[prepareMock.mock.calls.length - 1][0] as string;
+      // @ts-ignore
+      const queryStr = String(prepareMock.mock.calls[prepareMock.mock.calls.length - 1][0]);
       if (queryStr.includes('SELECT balance FROM users')) return { balance: 1000 }; // Insufficient
       return undefined;
     });
