@@ -26,6 +26,13 @@ export default function Dashboard() {
     const parsed = JSON.parse(savedUser);
     setUser(parsed);
     fetchPortfolio(parsed.id);
+
+    // Check if we came from the Explore page
+    const preselect = localStorage.getItem('preselect_asset');
+    if (preselect) {
+      selectAsset(preselect);
+      localStorage.removeItem('preselect_asset');
+    }
   }, [router]);
 
   const fetchPortfolio = async (userId: number) => {
@@ -92,14 +99,19 @@ export default function Dashboard() {
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-     const query = e.target.value;
-     setSearchQuery(query);
+    const query = e.target.value;
+    setSearchQuery(query);
 
-     // Debounce search
-     if (searchTimeout.current) clearTimeout(searchTimeout.current);
-     searchTimeout.current = setTimeout(() => {
-         performSearch(query);
-     }, 500);
+    // Debounce search
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+
+    searchTimeout.current = setTimeout(() => {
+      if (query.trim().length > 1) {
+        performSearch(query);
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
