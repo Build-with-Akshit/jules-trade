@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
@@ -7,7 +8,9 @@ import db from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
-    const { messages, userId, provider, apiKey } = await request.json();
+    const { messages, userId, provider } = await request.json();
+    const cookieStore = await cookies();
+    const apiKey = cookieStore.get('ai_key')?.value;
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -89,7 +92,7 @@ Never give actual financial advice; remind them this is a paper trading learning
 
     } catch (apiErr: any) {
          console.error('API Provider Error:', apiErr.message);
-         return NextResponse.json({ error: `AI Provider Error: ${apiErr.message}. Please check your API key.` }, { status: 400 });
+         return NextResponse.json({ error: 'AI Provider Error occurred. Please check your API key.' }, { status: 400 });
     }
 
   } catch (error: any) {

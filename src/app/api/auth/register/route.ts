@@ -6,8 +6,8 @@ export async function POST(request: Request) {
   try {
     const { language, experienceLevel } = await request.json();
 
-    // Generate a secure 6-character alphanumeric code
-    const loginCode = crypto.randomBytes(3).toString('hex').toUpperCase();
+    // Generate a secure 12-character alphanumeric code
+    const loginCode = crypto.randomBytes(6).toString('hex').toUpperCase();
 
     const stmt = db.prepare(`
       INSERT INTO users (login_code, language, experience_level)
