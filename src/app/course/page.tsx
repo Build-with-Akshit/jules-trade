@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowLeft, Send, Settings, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookOpen, ArrowLeft, Send, Settings, Check, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface Message {
   id?: string;
@@ -212,22 +213,29 @@ export default function Course() {
   if (!user) return <div className="min-h-screen flex items-center justify-center text-black">Loading...</div>;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
+      <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <button onClick={() => router.push('/dashboard')} className="text-gray-600 hover:text-black flex items-center">
+            <button onClick={() => router.push('/dashboard')} className="text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white flex items-center">
               <ArrowLeft className="w-5 h-5 mr-2" />
               Dashboard
             </button>
-            <div className="flex items-center text-blue-600 font-bold text-xl">
+            <div className="flex items-center text-blue-600 dark:text-blue-400 font-bold text-xl">
               <BookOpen className="mr-2" />
               Learning Center
             </div>
-            <button onClick={() => setShowSettings(!showSettings)} className="text-sm font-medium text-gray-600 hover:text-blue-600 flex items-center">
-              <Settings className="w-5 h-5 mr-1" />
-              AI Settings
-            </button>
+            <div className="flex items-center space-x-4">
+              <button onClick={() => router.push('/course/notes')} className="text-sm font-bold text-pink-600 dark:text-pink-400 hover:text-pink-500 flex items-center px-3 py-1.5 bg-pink-50 dark:bg-pink-900/30 rounded-full border border-pink-100 dark:border-pink-800 transition">
+                <FileText className="w-4 h-4 mr-1" />
+                GOAT Notes
+              </button>
+              <ThemeToggle />
+              <button onClick={() => setShowSettings(!showSettings)} className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center">
+                <Settings className="w-5 h-5 mr-1" />
+                AI Settings
+              </button>
+            </div>
           </div>
         </div>
       </nav>

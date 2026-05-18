@@ -1,3 +1,4 @@
+import yahooFinance from 'yahoo-finance2';
 import { NextResponse } from 'next/server';
 
 // Fallback search since Yahoo search has flaky API limits,
@@ -19,11 +20,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Query is required' }, { status: 400 });
   }
 
-  const matchedFallbacks = fallbacks.filter(f =>
-    f.symbol.toLowerCase().includes(query.toLowerCase()) ||
-    f.shortname.toLowerCase().includes(query.toLowerCase())
-  );
-
-  // Return the stable fallbacks
-  return NextResponse.json(matchedFallbacks);
+  try {
+    const results = await yahooFinance.search(query);
+    // @ts-ignore
+    return NextResponse.json(results.quotes || []);
+  } catch (error) {
+    console.warn('Market search error from Yahoo Finance, falling back to static list:', error);
+    const matchedFallbacks = fallbacks.filter(f =>
+      f.symbol.toLowerCase().includes(query.toLowerCase()) ||
+      f.shortname.toLowerCase().includes(query.toLowerCase())
+    );
+    // Return the stable fallbacks
+    return NextResponse.json(matchedFallbacks);
+  }
 }

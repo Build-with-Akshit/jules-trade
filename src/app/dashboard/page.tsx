@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, TrendingUp, TrendingDown, BookOpen, Briefcase } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -171,8 +172,8 @@ export default function Dashboard() {
   if (isLoading) return <div className="min-h-screen flex items-center justify-center text-black">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <nav className="bg-white shadow-sm">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white dark:text-gray-100 transition-colors">
+      <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center text-blue-600 font-bold text-xl">
@@ -180,12 +181,13 @@ export default function Dashboard() {
               PaperTrade Learn
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">Code: <span className="font-mono font-bold text-black">{user?.login_code}</span></span>
-              <button onClick={() => router.push('/course')} className="text-sm font-medium text-blue-600 hover:text-blue-500 flex items-center">
+              <ThemeToggle />
+              <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">Code: <span className="font-mono font-bold text-black dark:text-white">{user?.login_code}</span></span>
+              <button onClick={() => router.push('/course')} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 flex items-center">
                 <BookOpen className="w-4 h-4 mr-1" />
                 AI Course
               </button>
-              <button onClick={logout} className="text-sm font-medium text-gray-500 hover:text-gray-700">Logout</button>
+              <button onClick={logout} className="text-sm font-medium text-gray-500 dark:text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">Logout</button>
             </div>
           </div>
         </div>
@@ -195,21 +197,21 @@ export default function Dashboard() {
 
         {/* Top Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500 relative">
-            <h3 className="text-sm font-medium text-gray-500">Total Account Value</h3>
-            <p className="mt-2 text-3xl font-bold text-gray-900 transition-colors">${portfolio?.totalValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6 border-l-4 border-blue-500 relative">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Account Value</h3>
+            <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white transition-colors">${portfolio?.totalValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
             <span className="absolute top-4 right-4 flex h-3 w-3" title="Real-time syncing">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
             </span>
           </div>
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500 relative">
-            <h3 className="text-sm font-medium text-gray-500">Available Cash</h3>
-            <p className="mt-2 text-3xl font-bold text-gray-900">${portfolio?.balance?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6 border-l-4 border-green-500 relative">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Available Cash</h3>
+            <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">${portfolio?.balance?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500 relative">
-            <h3 className="text-sm font-medium text-gray-500">Invested Value (Live)</h3>
-            <p className="mt-2 text-3xl font-bold text-gray-900 transition-colors">${portfolio?.portfolioValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6 border-l-4 border-purple-500 relative">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Invested Value (Live)</h3>
+            <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white transition-colors">${portfolio?.portfolioValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
           </div>
         </div>
 
@@ -219,7 +221,7 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-8">
 
             {/* Trade & Search */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6">
               <h2 className="text-xl font-bold mb-4">Trade Assets</h2>
               <form onSubmit={handleSearchSubmit} className="relative flex items-center">
                 <input
@@ -237,14 +239,14 @@ export default function Dashboard() {
               {errorMsg && <p className="text-sm text-red-600 mt-2">{errorMsg}</p>}
 
               {searchResults.length > 0 && (
-                <ul className="mt-2 border rounded-md divide-y max-h-60 overflow-y-auto bg-white absolute w-[calc(100%-4rem)] z-10 shadow-lg">
+                <ul className="mt-2 border rounded-md divide-y dark:divide-gray-700 max-h-60 overflow-y-auto bg-white absolute w-[calc(100%-4rem)] z-10 shadow-lg">
                   {searchResults.map((result: any, i) => (
                     <li key={i} onClick={() => selectAsset(result.symbol)} className="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center transition">
                       <div>
                         <span className="font-bold text-blue-600">{result.symbol}</span>
                         <span className="ml-2 text-sm text-gray-600">{result.shortname || result.longname}</span>
                       </div>
-                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded border">{result.quoteType}</span>
+                      <span className="text-xs bg-gray-100 text-gray-500 dark:text-gray-400 px-2 py-1 rounded border">{result.quoteType}</span>
                     </li>
                   ))}
                 </ul>
@@ -294,33 +296,33 @@ export default function Dashboard() {
                       </button>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-gray-500 text-center">Estimated total: ${(selectedAsset.regularMarketPrice * tradeShares).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">Estimated total: ${(selectedAsset.regularMarketPrice * tradeShares).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                 </div>
               )}
             </div>
 
             {/* Holdings */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b flex justify-between items-center">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 overflow-hidden">
+              <div className="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center">
                 <h2 className="text-xl font-bold">Your Portfolio</h2>
                 <span className="text-xs text-gray-400">Updates every 5s</span>
               </div>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
+                <table className="min-w-full divide-y dark:divide-gray-700 divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asset</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Shares</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Price</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Current Price</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Value</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Return</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Asset</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Shares</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg Price</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current Price</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Value</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Return</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y dark:divide-gray-700 divide-gray-200 dark:divide-gray-700">
                     {portfolio?.holdings?.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">No assets in portfolio yet. Start trading above!</td>
+                        <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No assets in portfolio yet. Start trading above!</td>
                       </tr>
                     ) : (
                       portfolio?.holdings?.map((h: any, i: number) => (
@@ -357,13 +359,13 @@ export default function Dashboard() {
             </div>
 
             {/* Recent Transactions */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700">
+              <div className="px-6 py-4 border-b dark:border-gray-700">
                 <h2 className="text-lg font-bold">Recent History</h2>
               </div>
-              <ul className="divide-y divide-gray-200">
+              <ul className="divide-y dark:divide-gray-700 divide-gray-200 dark:divide-gray-700">
                 {portfolio?.transactions?.length === 0 ? (
-                  <li className="px-6 py-8 text-center text-sm text-gray-500">No transactions yet.</li>
+                  <li className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No transactions yet.</li>
                 ) : (
                   portfolio?.transactions?.map((t: any, i: number) => (
                     <li key={i} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50">
@@ -371,11 +373,11 @@ export default function Dashboard() {
                         <p className="text-sm font-bold">
                           <span className={t.type === 'BUY' ? 'text-green-600' : 'text-red-600'}>{t.type}</span> {t.symbol}
                         </p>
-                        <p className="text-xs text-gray-500">{new Date(t.timestamp).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(t.timestamp).toLocaleDateString()}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">{t.shares} sh</p>
-                        <p className="text-xs text-gray-500">@ ${t.price.toFixed(2)}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">@ ${t.price.toFixed(2)}</p>
                       </div>
                     </li>
                   ))
