@@ -1,5 +1,7 @@
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
 import { NextResponse } from 'next/server';
+
+const yahooFinance = new (YahooFinance as any)();
 
 // Fallback search since Yahoo search has flaky API limits,
 // using generic predefined assets to ensure smooth paper trading experience

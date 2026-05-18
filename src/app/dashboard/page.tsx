@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, TrendingUp, TrendingDown, BookOpen, Briefcase } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, BookOpen, Briefcase, FileText } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Dashboard() {
@@ -182,12 +182,16 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center space-x-4">
               <ThemeToggle />
-              <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">Code: <span className="font-mono font-bold text-black dark:text-white">{user?.login_code}</span></span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Code: <span className="font-mono font-bold text-black dark:text-white">{user?.login_code}</span></span>
+              <button onClick={() => router.push('/notes')} className="text-sm font-bold text-pink-600 dark:text-pink-400 hover:text-pink-500 flex items-center px-3 py-1.5 bg-pink-50 dark:bg-pink-900/30 rounded-full border border-pink-100 dark:border-pink-800 transition">
+                <FileText className="w-4 h-4 mr-1" />
+                GOAT Notes
+              </button>
               <button onClick={() => router.push('/course')} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 flex items-center">
                 <BookOpen className="w-4 h-4 mr-1" />
                 AI Course
               </button>
-              <button onClick={logout} className="text-sm font-medium text-gray-500 dark:text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">Logout</button>
+              <button onClick={logout} className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">Logout</button>
             </div>
           </div>
         </div>
