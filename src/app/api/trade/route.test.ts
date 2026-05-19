@@ -8,36 +8,36 @@ vi.mock('next/server', () => ({
   },
 }));
 
-// Create mocks directly outside the vi.mock to export them properly
-const runMock = vi.fn();
-const getMock = vi.fn();
-const prepareMock = vi.fn(() => ({ run: runMock, get: getMock }));
+const executeMock = vi.fn();
+const commitMock = vi.fn();
+const rollbackMock = vi.fn();
+const transactionMock = vi.fn().mockResolvedValue({
+  execute: executeMock,
+  commit: commitMock,
+  rollback: rollbackMock
+});
 
-vi.mock('@/lib/db', () => {
+vi.mock('@/lib/db', () => ({
+  default: {
+    transaction: (...args: any[]) => transactionMock(...args)
+  }
+}));
+
+vi.mock('yahoo-finance2', () => {
+  const quoteMock = vi.fn();
   return {
-    default: {
-      transaction: vi.fn((cb) => {
-        return () => cb();
-      }),
-      // @ts-ignore
-      prepare: (...args: any[]) => prepareMock(...args),
-    },
+    default: class MockYahooFinance {
+      static mockQuote = quoteMock;
+      quote = quoteMock;
+    }
   };
 });
 
-vi.mock('yahoo-finance2', () => ({
-  default: {
-    quote: vi.fn(),
-  },
-}));
-
 // Import mocked modules after setup
 import db from '@/lib/db';
-import yahooFinance from 'yahoo-finance2';
-import { NextResponse } from 'next/server';
+import YahooFinance from 'yahoo-finance2';
 
-// Get mocked instances
-const quoteMock = vi.mocked(yahooFinance.quote);
+const mockQuote = (YahooFinance as any).mockQuote;
 
 describe('Trade API Route - BUY logic', () => {
   let consoleErrorSpy: any;
@@ -58,23 +58,17 @@ describe('Trade API Route - BUY logic', () => {
     const shares = 10;
     const currentPrice = 150;
 
-    // @ts-ignore
-    quoteMock.mockResolvedValueOnce({ regularMarketPrice: currentPrice } as any);
+    mockQuote.mockResolvedValueOnce({ regularMarketPrice: currentPrice } as any);
 
-    // Setup DB mock responses
-    getMock.mockImplementation((...args) => {
-      // @ts-ignore
-      const queryStr = String(prepareMock.mock.calls[prepareMock.mock.calls.length - 1][0]);
-
-      if (queryStr.includes('SELECT balance FROM users')) {
-        return { balance: 2000 }; // Ensure user has enough balance (10 * 150 = 1500)
+    // Setup DB mock responses inside the transaction execute Mock
+    executeMock.mockImplementation(async ({ sql, args }) => {
+      if (sql.includes('SELECT balance FROM users')) {
+        return { rows: [{ balance: 2000 }] }; // Enough balance (10 * 150 = 1500)
       }
-
-      if (queryStr.includes('SELECT shares, average_price FROM portfolio')) {
-        return undefined; // No existing holding
+      if (sql.includes('SELECT shares, average_price FROM portfolio')) {
+        return { rows: [] }; // No existing holding
       }
-
-      return undefined;
+      return { rows: [] };
     });
 
     const request = createRequest({ userId, symbol, type: 'BUY', shares });
@@ -87,19 +81,26 @@ describe('Trade API Route - BUY logic', () => {
       totalValue: 1500
     });
 
-    expect(db.transaction).toHaveBeenCalled();
+    expect(transactionMock).toHaveBeenCalledWith("write");
+    expect(commitMock).toHaveBeenCalled();
 
-    // Check balance update
-    expect(prepareMock).toHaveBeenCalledWith('UPDATE users SET balance = balance - ? WHERE id = ?');
-    expect(runMock).toHaveBeenCalledWith(1500, userId);
+    // Verify SQL executions
+    const calls = executeMock.mock.calls;
+    
+    // Check balance update call
+    const updateBalanceCall = calls.find(c => c[0].sql.includes('UPDATE users SET balance = balance - ?'));
+    expect(updateBalanceCall).toBeDefined();
+    expect(updateBalanceCall[0].args).toEqual([1500, userId]);
 
-    // Check portfolio update
-    expect(prepareMock).toHaveBeenCalledWith('INSERT INTO portfolio (user_id, symbol, shares, average_price) VALUES (?, ?, ?, ?)');
-    expect(runMock).toHaveBeenCalledWith(userId, symbol, shares, currentPrice);
+    // Check portfolio insert call
+    const insertPortfolioCall = calls.find(c => c[0].sql.includes('INSERT INTO portfolio'));
+    expect(insertPortfolioCall).toBeDefined();
+    expect(insertPortfolioCall[0].args).toEqual([userId, symbol, shares, currentPrice]);
 
-    // Check transaction record
-    expect(prepareMock).toHaveBeenCalledWith('INSERT INTO transactions (user_id, symbol, type, shares, price) VALUES (?, ?, ?, ?, ?)');
-    expect(runMock).toHaveBeenCalledWith(userId, symbol, 'BUY', shares, currentPrice);
+    // Check transaction record call
+    const insertTransactionCall = calls.find(c => c[0].sql.includes('INSERT INTO transactions'));
+    expect(insertTransactionCall).toBeDefined();
+    expect(insertTransactionCall[0].args).toEqual([userId, symbol, 'BUY', shares, currentPrice]);
   });
 
   it('should update existing portfolio when buying a stock already held', async () => {
@@ -108,17 +109,14 @@ describe('Trade API Route - BUY logic', () => {
     const shares = 5;
     const currentPrice = 150; // Total new value = 750
 
-    // @ts-ignore
-    quoteMock.mockResolvedValueOnce({ regularMarketPrice: currentPrice } as any);
+    mockQuote.mockResolvedValueOnce({ regularMarketPrice: currentPrice } as any);
 
-    getMock.mockImplementation((...args) => {
-      // @ts-ignore
-      const queryStr = String(prepareMock.mock.calls[prepareMock.mock.calls.length - 1][0]);
-      if (queryStr.includes('SELECT balance FROM users')) return { balance: 2000 };
-      if (queryStr.includes('SELECT shares, average_price FROM portfolio')) {
-        return { shares: 10, average_price: 100 }; // Existing 10 shares at $100
+    executeMock.mockImplementation(async ({ sql }) => {
+      if (sql.includes('SELECT balance FROM users')) return { rows: [{ balance: 2000 }] };
+      if (sql.includes('SELECT shares, average_price FROM portfolio')) {
+        return { rows: [{ shares: 10, average_price: 100 }] }; // Existing 10 shares at $100
       }
-      return undefined;
+      return { rows: [] };
     });
 
     const request = createRequest({ userId, symbol, type: 'BUY', shares });
@@ -128,8 +126,10 @@ describe('Trade API Route - BUY logic', () => {
     const expectedNewShares = 15; // 10 + 5
     const expectedNewAvg = ((10 * 100) + 750) / 15;
 
-    expect(prepareMock).toHaveBeenCalledWith('UPDATE portfolio SET shares = ?, average_price = ? WHERE user_id = ? AND symbol = ?');
-    expect(runMock).toHaveBeenCalledWith(expectedNewShares, expectedNewAvg, userId, symbol);
+    const calls = executeMock.mock.calls;
+    const updatePortfolioCall = calls.find(c => c[0].sql.includes('UPDATE portfolio SET shares = ?, average_price = ?'));
+    expect(updatePortfolioCall).toBeDefined();
+    expect(updatePortfolioCall[0].args).toEqual([expectedNewShares, expectedNewAvg, userId, symbol]);
   });
 
   it('should return error if user has insufficient funds', async () => {
@@ -138,14 +138,11 @@ describe('Trade API Route - BUY logic', () => {
     const shares = 10;
     const currentPrice = 150; // Total needed = 1500
 
-    // @ts-ignore
-    quoteMock.mockResolvedValueOnce({ regularMarketPrice: currentPrice } as any);
+    mockQuote.mockResolvedValueOnce({ regularMarketPrice: currentPrice } as any);
 
-    getMock.mockImplementation((...args) => {
-      // @ts-ignore
-      const queryStr = String(prepareMock.mock.calls[prepareMock.mock.calls.length - 1][0]);
-      if (queryStr.includes('SELECT balance FROM users')) return { balance: 1000 }; // Insufficient
-      return undefined;
+    executeMock.mockImplementation(async ({ sql }) => {
+      if (sql.includes('SELECT balance FROM users')) return { rows: [{ balance: 1000 }] }; // Insufficient
+      return { rows: [] };
     });
 
     const request = createRequest({ userId, symbol, type: 'BUY', shares });
@@ -154,9 +151,8 @@ describe('Trade API Route - BUY logic', () => {
     expect(response.data).toEqual({ error: 'Insufficient funds' });
     expect(response.init?.status).toBe(400);
 
-    // Ensure no updates occurred
-    expect(runMock).not.toHaveBeenCalled();
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(rollbackMock).toHaveBeenCalled();
+    expect(commitMock).not.toHaveBeenCalled();
   });
 
   it('should return error for invalid input (e.g., negative shares)', async () => {
@@ -165,7 +161,7 @@ describe('Trade API Route - BUY logic', () => {
 
     expect(response.data).toEqual({ error: 'Invalid input' });
     expect(response.init?.status).toBe(400);
-    expect(quoteMock).not.toHaveBeenCalled();
+    expect(mockQuote).not.toHaveBeenCalled();
   });
 
   it('should return error for invalid input (e.g., non-integer shares)', async () => {
@@ -174,6 +170,6 @@ describe('Trade API Route - BUY logic', () => {
 
     expect(response.data).toEqual({ error: 'Invalid input' });
     expect(response.init?.status).toBe(400);
-    expect(quoteMock).not.toHaveBeenCalled();
+    expect(mockQuote).not.toHaveBeenCalled();
   });
 });

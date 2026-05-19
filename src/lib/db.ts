@@ -1,22 +1,23 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { createClient } from '@libsql/client';
 
-// Connect to an in-memory or file-based database
-// Vercel serverless functions have a read-only filesystem except for /tmp
-const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 const isTest = process.env.NODE_ENV === 'test';
 
-const dbPath = isTest
-  ? ':memory:'
-  : isProduction
-    ? path.join('/tmp', 'paper-trading.sqlite')
-    : path.join(process.cwd(), 'paper-trading.sqlite');
+const url = isTest 
+  ? 'file::memory:' 
+  : (process.env.TURSO_DATABASE_URL || 'file:local.db');
 
-const db = new Database(dbPath);
+const authToken = isTest 
+  ? undefined 
+  : process.env.TURSO_AUTH_TOKEN;
 
-// Initialize database tables
-export function initDb() {
-  db.exec(`
+const db = createClient({
+  url,
+  authToken,
+});
+
+// Initialize database tables asynchronously
+export async function initDb() {
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       login_code TEXT UNIQUE NOT NULL,
@@ -24,8 +25,10 @@ export function initDb() {
       language TEXT DEFAULT 'English',
       experience_level TEXT DEFAULT 'Beginner',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+    )
+  `);
 
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS portfolio (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -34,8 +37,10 @@ export function initDb() {
       average_price REAL NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users (id),
       UNIQUE(user_id, symbol)
-    );
+    )
+  `);
 
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -45,8 +50,10 @@ export function initDb() {
       price REAL NOT NULL,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users (id)
-    );
+    )
+  `);
 
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS course_progress (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -54,11 +61,13 @@ export function initDb() {
       completed BOOLEAN DEFAULT 0,
       FOREIGN KEY (user_id) REFERENCES users (id),
       UNIQUE(user_id, module_id)
-    );
+    )
   `);
 }
 
 // Automatically initialize tables when imported
-initDb();
+initDb().catch(err => {
+  console.error('Failed to initialize database tables:', err);
+});
 
 export default db;

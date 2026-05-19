@@ -46,8 +46,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Login code is required' }, { status: 400 });
     }
 
-    const stmt = db.prepare('SELECT id, login_code, balance, language, experience_level FROM users WHERE login_code = ?');
-    const user = stmt.get(loginCode.toUpperCase());
+    const result = await db.execute({
+      sql: 'SELECT id, login_code, balance, language, experience_level FROM users WHERE login_code = ?',
+      args: [loginCode.toUpperCase()]
+    });
+    const user = result.rows[0];
 
     if (!user) {
       // Record failed attempt

@@ -29,29 +29,34 @@ vi.mock('ai', () => ({
 }));
 
 // Mock db
-const mockGet = vi.fn();
-const mockAll = vi.fn();
+const mockExecute = vi.fn();
 
 vi.mock('@/lib/db', () => ({
   default: {
-    prepare: vi.fn().mockImplementation((query) => {
-      if (query.includes('SELECT language, experience_level FROM users')) {
-        return { get: mockGet };
-      }
-      if (query.includes('SELECT symbol, type, shares FROM transactions')) {
-        return { all: mockAll };
-      }
-      return { get: vi.fn(), all: vi.fn() };
-    })
+    execute: (...args: any[]) => mockExecute(...args),
   }
 }));
 
 // Helper to create mock requests
 function createMockRequest(body: any) {
+  // Mock cookies get for API Key (if provided in request body for mock purposes)
   return {
     json: vi.fn().mockResolvedValue(body)
   } as unknown as Request;
 }
+
+// We mock cookies to return ai_key if apiKey is in request body
+vi.mock('next/headers', () => ({
+  cookies: vi.fn().mockResolvedValue({
+    get: (name: string) => {
+      // In the tests we pass apiKey in request, so we can mock this dynamically if needed, 
+      // or we can mock it here. Let's return a value if we want to simulate having an API key.
+      return null; // By default no key, we will override it in test cases using spy/mock
+    }
+  })
+}));
+
+import { cookies } from 'next/headers';
 
 describe('POST /api/course/chat', () => {
   beforeEach(() => {
@@ -69,7 +74,7 @@ describe('POST /api/course/chat', () => {
   });
 
   it('returns 404 if user is not found', async () => {
-    mockGet.mockReturnValueOnce(undefined);
+    mockExecute.mockResolvedValueOnce({ rows: [] }); // User not found
     const request = createMockRequest({ messages: [], userId: 'user-1' });
     const response = await POST(request);
 
@@ -80,8 +85,16 @@ describe('POST /api/course/chat', () => {
   });
 
   it('returns fallback mock response if apiKey is not provided', async () => {
-    mockGet.mockReturnValueOnce({ language: 'English', experience_level: 'beginner' });
-    mockAll.mockReturnValueOnce([]); // no trades
+    mockExecute.mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [{ language: 'English', experience_level: 'beginner' }] };
+      }
+      return { rows: [] }; // no trades
+    });
+
+    vi.mocked(cookies).mockResolvedValueOnce({
+      get: () => undefined
+    } as any);
 
     const request = createMockRequest({ messages: [], userId: 'user-1' });
     const response = await POST(request);
@@ -93,8 +106,19 @@ describe('POST /api/course/chat', () => {
   });
 
   it('returns fallback mock response with trades context if apiKey is not provided', async () => {
-    mockGet.mockReturnValueOnce({ language: 'Spanish', experience_level: 'expert' });
-    mockAll.mockReturnValueOnce([{ symbol: 'AAPL', type: 'buy', shares: 10 }]); // has trades
+    mockExecute.mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [{ language: 'Spanish', experience_level: 'expert' }] };
+      }
+      if (sql.includes('FROM transactions')) {
+        return { rows: [{ symbol: 'AAPL', type: 'buy', shares: 10 }] };
+      }
+      return { rows: [] };
+    });
+
+    vi.mocked(cookies).mockResolvedValueOnce({
+      get: () => undefined
+    } as any);
 
     const request = createMockRequest({ messages: [], userId: 'user-1' });
     const response = await POST(request);
@@ -106,14 +130,21 @@ describe('POST /api/course/chat', () => {
   });
 
   it('successfully calls ai provider with openai', async () => {
-    mockGet.mockReturnValueOnce({ language: 'English', experience_level: 'beginner' });
-    mockAll.mockReturnValueOnce([]);
+    mockExecute.mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [{ language: 'English', experience_level: 'beginner' }] };
+      }
+      return { rows: [] };
+    });
+
+    vi.mocked(cookies).mockResolvedValueOnce({
+      get: () => ({ value: 'test-key' })
+    } as any);
 
     const request = createMockRequest({
       messages: [{ role: 'user', content: 'hello' }],
       userId: 'user-1',
-      provider: 'openai',
-      apiKey: 'test-key'
+      provider: 'openai'
     });
 
     const response = await POST(request);
@@ -126,14 +157,21 @@ describe('POST /api/course/chat', () => {
   });
 
   it('successfully calls ai provider with anthropic', async () => {
-    mockGet.mockReturnValueOnce({ language: 'English', experience_level: 'beginner' });
-    mockAll.mockReturnValueOnce([]);
+    mockExecute.mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [{ language: 'English', experience_level: 'beginner' }] };
+      }
+      return { rows: [] };
+    });
+
+    vi.mocked(cookies).mockResolvedValueOnce({
+      get: () => ({ value: 'test-key' })
+    } as any);
 
     const request = createMockRequest({
       messages: [{ role: 'user', content: 'hello' }],
       userId: 'user-1',
-      provider: 'anthropic',
-      apiKey: 'test-key'
+      provider: 'anthropic'
     });
 
     const response = await POST(request);
@@ -144,14 +182,21 @@ describe('POST /api/course/chat', () => {
   });
 
   it('successfully calls ai provider with google', async () => {
-    mockGet.mockReturnValueOnce({ language: 'English', experience_level: 'beginner' });
-    mockAll.mockReturnValueOnce([]);
+    mockExecute.mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [{ language: 'English', experience_level: 'beginner' }] };
+      }
+      return { rows: [] };
+    });
+
+    vi.mocked(cookies).mockResolvedValueOnce({
+      get: () => ({ value: 'test-key' })
+    } as any);
 
     const request = createMockRequest({
       messages: [{ role: 'user', content: 'hello' }],
       userId: 'user-1',
-      provider: 'google',
-      apiKey: 'test-key'
+      provider: 'google'
     });
 
     const response = await POST(request);
@@ -162,14 +207,21 @@ describe('POST /api/course/chat', () => {
   });
 
   it('successfully calls ai provider with openrouter', async () => {
-    mockGet.mockReturnValueOnce({ language: 'English', experience_level: 'beginner' });
-    mockAll.mockReturnValueOnce([]);
+    mockExecute.mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [{ language: 'English', experience_level: 'beginner' }] };
+      }
+      return { rows: [] };
+    });
+
+    vi.mocked(cookies).mockResolvedValueOnce({
+      get: () => ({ value: 'test-key' })
+    } as any);
 
     const request = createMockRequest({
       messages: [{ role: 'user', content: 'hello' }],
       userId: 'user-1',
-      provider: 'openrouter',
-      apiKey: 'test-key'
+      provider: 'openrouter'
     });
 
     const response = await POST(request);
@@ -180,14 +232,21 @@ describe('POST /api/course/chat', () => {
   });
 
   it('successfully calls ai provider with default fallback (unknown provider)', async () => {
-    mockGet.mockReturnValueOnce({ language: 'English', experience_level: 'beginner' });
-    mockAll.mockReturnValueOnce([]);
+    mockExecute.mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [{ language: 'English', experience_level: 'beginner' }] };
+      }
+      return { rows: [] };
+    });
+
+    vi.mocked(cookies).mockResolvedValueOnce({
+      get: () => ({ value: 'test-key' })
+    } as any);
 
     const request = createMockRequest({
       messages: [{ role: 'user', content: 'hello' }],
       userId: 'user-1',
-      provider: 'unknown',
-      apiKey: 'test-key'
+      provider: 'unknown'
     });
 
     const response = await POST(request);
@@ -198,8 +257,16 @@ describe('POST /api/course/chat', () => {
   });
 
   it('handles provider error', async () => {
-    mockGet.mockReturnValueOnce({ language: 'English', experience_level: 'beginner' });
-    mockAll.mockReturnValueOnce([]);
+    mockExecute.mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [{ language: 'English', experience_level: 'beginner' }] };
+      }
+      return { rows: [] };
+    });
+
+    vi.mocked(cookies).mockResolvedValueOnce({
+      get: () => ({ value: 'test-key' })
+    } as any);
 
     const { streamText } = await import('ai');
     (streamText as any).mockRejectedValueOnce(new Error('Invalid API Key'));
@@ -207,8 +274,7 @@ describe('POST /api/course/chat', () => {
     const request = createMockRequest({
       messages: [{ role: 'user', content: 'hello' }],
       userId: 'user-1',
-      provider: 'openai',
-      apiKey: 'test-key'
+      provider: 'openai'
     });
 
     const response = await POST(request);

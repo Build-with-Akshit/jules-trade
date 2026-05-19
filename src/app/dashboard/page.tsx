@@ -171,6 +171,10 @@ export default function Dashboard() {
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center text-black">Loading...</div>;
 
+  const netAccountReturn = (portfolio?.totalValue || 100000) - 100000;
+  const netAccountReturnPct = (netAccountReturn / 100000) * 100;
+  const isAccountProfitable = netAccountReturn >= 0;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white dark:text-gray-100 transition-colors">
       <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 dark:border-gray-700">
@@ -200,22 +204,31 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Top Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6 border-l-4 border-blue-500 relative">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Account Value</h3>
-            <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white transition-colors">${portfolio?.totalValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
+            <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white transition-colors">${portfolio?.totalValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '100,000.00'}</p>
             <span className="absolute top-4 right-4 flex h-3 w-3" title="Real-time syncing">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
             </span>
           </div>
+          <div className={`bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6 border-l-4 ${isAccountProfitable ? 'border-green-500' : 'border-red-500'} relative`}>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Account P&L</h3>
+            <p className={`mt-2 text-3xl font-bold transition-colors ${isAccountProfitable ? 'text-green-600' : 'text-red-600'}`}>
+              {isAccountProfitable ? '+' : '-'}${Math.abs(netAccountReturn).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            </p>
+            <p className={`text-sm mt-1 font-medium ${isAccountProfitable ? 'text-green-600' : 'text-red-600'}`}>
+              {isAccountProfitable ? '+' : '-'}{Math.abs(netAccountReturnPct).toFixed(2)}% All time
+            </p>
+          </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6 border-l-4 border-green-500 relative">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Available Cash</h3>
-            <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">${portfolio?.balance?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">${portfolio?.balance?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6 border-l-4 border-purple-500 relative">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Invested Value (Live)</h3>
-            <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white transition-colors">${portfolio?.portfolioValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white transition-colors">${portfolio?.portfolioValue?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
           </div>
         </div>
 
@@ -268,7 +281,11 @@ export default function Dashboard() {
                     <div>
                       <h3 className="text-2xl font-bold">{selectedAsset.symbol}</h3>
                       <p className="text-gray-600">{selectedAsset.shortName || selectedAsset.longName}</p>
-                      <span className="text-xs text-blue-600 font-medium px-2 py-1 bg-blue-50 rounded-full inline-block mt-2 border border-blue-100">🔴 Live Pricing</span>
+                      {selectedAsset.marketState === 'REGULAR' ? (
+                        <span className="text-xs text-green-700 font-medium px-2 py-1 bg-green-100 rounded-full inline-block mt-2 border border-green-200">🟢 Market Open</span>
+                      ) : (
+                        <span className="text-xs text-orange-700 font-medium px-2 py-1 bg-orange-100 rounded-full inline-block mt-2 border border-orange-200">🟠 Market {selectedAsset.marketState || 'CLOSED'}</span>
+                      )}
                     </div>
                     <div className="text-right mt-1 mr-4">
                       <p className="text-3xl font-bold">${selectedAsset.regularMarketPrice?.toFixed(2)}</p>
@@ -279,28 +296,61 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-4">
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Shares to Trade</label>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={tradeShares}
-                        onChange={(e) => setTradeShares(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-black"
-                      />
+                  {/* Portfolio Position Context */}
+                  {(() => {
+                    const holding = portfolio?.holdings?.find((h: any) => h.symbol === selectedAsset.symbol);
+                    if (holding) {
+                      const isProfitable = holding.return >= 0;
+                      return (
+                        <div className={`mb-6 p-4 rounded-md border ${isProfitable ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900' : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-900'}`}>
+                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                            You currently own <span className="font-bold">{holding.shares} shares</span> at an average price of <span className="font-bold">${holding.average_price.toFixed(2)}</span>.
+                          </p>
+                          <p className={`text-lg font-bold mt-1 ${isProfitable ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                            Unrealized Profit: {isProfitable ? '+' : '-'}${Math.abs(holding.return).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ({isProfitable ? '+' : '-'}{Math.abs(holding.returnPct).toFixed(2)}%)
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  {selectedAsset.marketState === 'REGULAR' ? (
+                    <>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Shares to Trade</label>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={tradeShares}
+                            onChange={(e) => setTradeShares(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-black"
+                          />
+                        </div>
+                        <div className="flex-1 pt-6 flex space-x-2">
+                          <button onClick={() => executeTrade('BUY')} className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-bold transition shadow-sm">
+                            BUY
+                          </button>
+                          <button onClick={() => executeTrade('SELL')} className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 font-bold transition shadow-sm">
+                            SELL
+                          </button>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">Estimated total: ${(selectedAsset.regularMarketPrice * tradeShares).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    </>
+                  ) : (
+                    <div className="bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-md p-4 text-center mt-4">
+                      <p className="text-orange-800 dark:text-orange-300 font-bold">Trading Unavailable</p>
+                      <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">This asset can only be traded during regular market hours.</p>
+                      <p className="text-sm text-orange-700 dark:text-orange-300 font-medium mt-2">
+                        {selectedAsset.market === 'us_market' && `⏰ US Market Hours: Mon-Fri, 9:30 AM - 4:00 PM ${selectedAsset.exchangeTimezoneShortName || 'ET'}`}
+                        {selectedAsset.market === 'in_market' && `⏰ Indian Market Hours: Mon-Fri, 9:15 AM - 3:30 PM ${selectedAsset.exchangeTimezoneShortName || 'IST'}`}
+                        {selectedAsset.market !== 'us_market' && selectedAsset.market !== 'in_market' && `⏰ Check local exchange hours (usually Mon-Fri, ${selectedAsset.exchangeTimezoneShortName || 'Local Time'})`}
+                      </p>
                     </div>
-                    <div className="flex-1 pt-6 flex space-x-2">
-                      <button onClick={() => executeTrade('BUY')} className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-bold transition shadow-sm">
-                        BUY
-                      </button>
-                      <button onClick={() => executeTrade('SELL')} className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 font-bold transition shadow-sm">
-                        SELL
-                      </button>
-                    </div>
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">Estimated total: ${(selectedAsset.regularMarketPrice * tradeShares).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -321,23 +371,34 @@ export default function Dashboard() {
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current Price</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Value</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Return</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y dark:divide-gray-700 divide-gray-200 dark:divide-gray-700">
                     {portfolio?.holdings?.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No assets in portfolio yet. Start trading above!</td>
+                        <td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No assets in portfolio yet. Start trading above!</td>
                       </tr>
                     ) : (
                       portfolio?.holdings?.map((h: any, i: number) => (
-                        <tr key={i} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => selectAsset(h.symbol)}>
+                        <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" onClick={() => {
+                          selectAsset(h.symbol);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}>
                           <td className="px-6 py-4 whitespace-nowrap font-bold text-blue-600">{h.symbol}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">{h.shares}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">${h.average_price.toFixed(2)}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm transition-colors">${h.currentPrice.toFixed(2)}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium transition-colors">${h.totalValue.toFixed(2)}</td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-medium transition-colors ${h.return >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            ${h.return.toFixed(2)} ({h.returnPct.toFixed(2)}%)
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${h.return >= 0 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
+                              {h.return >= 0 ? '+' : '-'}${Math.abs(h.return).toFixed(2)} ({h.returnPct.toFixed(2)}%)
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 px-3 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                               Trade
+                            </button>
                           </td>
                         </tr>
                       ))
