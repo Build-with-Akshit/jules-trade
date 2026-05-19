@@ -178,6 +178,32 @@ export default function Dashboard() {
     router.push('/login');
   };
 
+  const deleteAccount = async () => {
+    if (!user) return;
+    const confirmDelete = window.confirm(
+      "⚠️ WARNING: Are you sure you want to PERMANENTLY delete your account? This will erase all your portfolio holdings, cash balance, course progress, and transaction history from the server. This action CANNOT be undone."
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch('/api/auth/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+      } else {
+        alert("Your account and all associated data have been permanently deleted.");
+        localStorage.removeItem('user');
+        router.push('/login');
+      }
+    } catch (err) {
+      alert("Failed to delete account. Please try again.");
+    }
+  };
+
   if (isLoading) return <div className="min-h-screen flex items-center justify-center text-black">Loading...</div>;
 
   const netAccountReturn = (portfolio?.totalValue || 100000) - 100000;
@@ -205,6 +231,7 @@ export default function Dashboard() {
                 AI Course
               </button>
               <button onClick={logout} className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">Logout</button>
+              <button onClick={deleteAccount} className="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Delete Account</button>
             </div>
           </div>
         </div>
