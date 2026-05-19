@@ -9,17 +9,18 @@ export async function POST(request: Request) {
     // Generate a secure 12-character alphanumeric code
     const loginCode = crypto.randomBytes(6).toString('hex').toUpperCase();
 
-    const stmt = db.prepare(`
-      INSERT INTO users (login_code, language, experience_level)
-      VALUES (?, ?, ?)
-    `);
+    const info = await db.execute({
+      sql: `INSERT INTO users (login_code, language, experience_level) VALUES (?, ?, ?)`,
+      args: [loginCode, language || 'English', experienceLevel || 'Beginner']
+    });
 
-    const info = stmt.run(loginCode, language || 'English', experienceLevel || 'Beginner');
+    // info.lastInsertRowid may be a bigint, convert to number safely
+    const userId = info.lastInsertRowid ? Number(info.lastInsertRowid) : null;
 
     return NextResponse.json({
       success: true,
       loginCode,
-      userId: info.lastInsertRowid
+      userId
     });
   } catch (error) {
     console.error('Registration error:', error);

@@ -1,22 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from './route';
-import { NextResponse } from 'next/server';
 
 // Mock dependencies
 vi.mock('@/lib/db', () => ({
   default: {
-    prepare: vi.fn(),
+    execute: vi.fn(),
   },
 }));
 
-vi.mock('yahoo-finance2', () => ({
-  default: {
-    quote: vi.fn(),
-  },
-}));
+vi.mock('yahoo-finance2', () => {
+  const quoteMock = vi.fn();
+  return {
+    default: class MockYahooFinance {
+      static mockQuote = quoteMock;
+      quote = quoteMock;
+    }
+  };
+});
 
 import db from '@/lib/db';
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
+
+const mockQuote = (YahooFinance as any).mockQuote;
 
 describe('Portfolio API', () => {
   beforeEach(() => {
@@ -33,13 +38,13 @@ describe('Portfolio API', () => {
   });
 
   it('should return 404 if user is not found', async () => {
-    const mockPrepare = vi.fn().mockImplementation((query) => {
-      if (query.includes('FROM users')) {
-        return { get: vi.fn().mockReturnValue(undefined) };
+    const mockExecute = vi.fn().mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [] };
       }
-      return { get: vi.fn(), all: vi.fn() };
+      return { rows: [] };
     });
-    (db.prepare as any) = mockPrepare;
+    (db.execute as any) = mockExecute;
 
     const request = new Request('http://localhost/api/portfolio?userId=not-found');
     const response = await GET(request);
@@ -50,25 +55,25 @@ describe('Portfolio API', () => {
   });
 
   it('should return portfolio data successfully with mocked market data', async () => {
-    const mockPrepare = vi.fn().mockImplementation((query) => {
-      if (query.includes('FROM users')) {
-        return { get: vi.fn().mockReturnValue({ balance: 1000 }) };
+    const mockExecute = vi.fn().mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [{ balance: 1000 }] };
       }
-      if (query.includes('FROM portfolio')) {
-        return { all: vi.fn().mockReturnValue([
+      if (sql.includes('FROM portfolio')) {
+        return { rows: [
           { symbol: 'AAPL', shares: 10, average_price: 150 }
-        ]) };
+        ] };
       }
-      if (query.includes('FROM transactions')) {
-        return { all: vi.fn().mockReturnValue([
+      if (sql.includes('FROM transactions')) {
+        return { rows: [
           { symbol: 'AAPL', type: 'BUY', shares: 10, price: 150, timestamp: '2024-01-01T00:00:00Z' }
-        ]) };
+        ] };
       }
-      return { get: vi.fn(), all: vi.fn() };
+      return { rows: [] };
     });
-    (db.prepare as any) = mockPrepare;
+    (db.execute as any) = mockExecute;
 
-    (yahooFinance.quote as any).mockResolvedValue([
+    mockQuote.mockResolvedValue([
       { symbol: 'AAPL', regularMarketPrice: 160 }
     ]);
 
@@ -90,23 +95,23 @@ describe('Portfolio API', () => {
   });
 
   it('should handle yahooFinance fallback if fetch fails', async () => {
-    const mockPrepare = vi.fn().mockImplementation((query) => {
-      if (query.includes('FROM users')) {
-        return { get: vi.fn().mockReturnValue({ balance: 1000 }) };
+    const mockExecute = vi.fn().mockImplementation(async ({ sql }) => {
+      if (sql.includes('FROM users')) {
+        return { rows: [{ balance: 1000 }] };
       }
-      if (query.includes('FROM portfolio')) {
-        return { all: vi.fn().mockReturnValue([
+      if (sql.includes('FROM portfolio')) {
+        return { rows: [
           { symbol: 'AAPL', shares: 10, average_price: 150 }
-        ]) };
+        ] };
       }
-      if (query.includes('FROM transactions')) {
-        return { all: vi.fn().mockReturnValue([]) };
+      if (sql.includes('FROM transactions')) {
+        return { rows: [] };
       }
-      return { get: vi.fn(), all: vi.fn() };
+      return { rows: [] };
     });
-    (db.prepare as any) = mockPrepare;
+    (db.execute as any) = mockExecute;
 
-    (yahooFinance.quote as any).mockRejectedValue(new Error('API Rate Limit'));
+    mockQuote.mockRejectedValue(new Error('API Rate Limit'));
 
     const request = new Request('http://localhost/api/portfolio?userId=user1');
     const response = await GET(request);
@@ -121,10 +126,10 @@ describe('Portfolio API', () => {
   });
 
   it('should return 500 if database fails', async () => {
-    const mockPrepare = vi.fn().mockImplementation(() => {
+    const mockExecute = vi.fn().mockImplementation(async () => {
       throw new Error('Database Error');
     });
-    (db.prepare as any) = mockPrepare;
+    (db.execute as any) = mockExecute;
 
     const request = new Request('http://localhost/api/portfolio?userId=user1');
     const response = await GET(request);

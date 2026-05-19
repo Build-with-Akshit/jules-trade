@@ -17,16 +17,22 @@ export async function POST(request: Request) {
     }
 
     // Get user details
-    const userStmt = db.prepare('SELECT language, experience_level FROM users WHERE id = ?');
-    const user = userStmt.get(userId) as { language: string, experience_level: string } | undefined;
+    const userResult = await db.execute({
+      sql: 'SELECT language, experience_level FROM users WHERE id = ?',
+      args: [userId]
+    });
+    const user = userResult.rows[0] as unknown as { language: string, experience_level: string } | undefined;
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Get recent user trades to personalize context
-    const tradesStmt = db.prepare('SELECT symbol, type, shares FROM transactions WHERE user_id = ? ORDER BY timestamp DESC LIMIT 5');
-    const recentTrades = tradesStmt.all(userId);
+    const tradesResult = await db.execute({
+      sql: 'SELECT symbol, type, shares FROM transactions WHERE user_id = ? ORDER BY timestamp DESC LIMIT 5',
+      args: [userId]
+    });
+    const recentTrades = tradesResult.rows;
     const tradesContext = recentTrades.length > 0
       ? `Recent user trades: ${JSON.stringify(recentTrades)}.`
       : 'User has no trades yet. Encourage them to make their first paper trade!';

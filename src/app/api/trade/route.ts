@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
 import { YahooQuote } from '@/lib/types';
+
+const yahooFinance = new (YahooFinance as any)();
 
 export async function POST(request: Request) {
   try {
@@ -12,20 +14,31 @@ export async function POST(request: Request) {
     }
 
     // Get current market price
-    const quote = await yahooFinance.quote(symbol) as YahooQuote;
+    const quote = await yahooFinance.quote(symbol) as any;
     const currentPrice = quote.regularMarketPrice;
 
     if (!currentPrice) {
       return NextResponse.json({ error: 'Failed to get current price' }, { status: 400 });
     }
 
+    // Check if the market is open for trading
+    if (quote.marketState !== 'REGULAR') {
+      return NextResponse.json({ 
+        error: `Market is currently ${quote.marketState || 'CLOSED'}. You can only trade during regular market hours.` 
+      }, { status: 400 });
+    }
+
     const totalValue = currentPrice * shares;
 
     // Begin transaction
-    const transaction = db.transaction(() => {
+    const tx = await db.transaction("write");
+    try {
       // Get user
-      const userStmt = db.prepare('SELECT balance FROM users WHERE id = ?');
-      const user = userStmt.get(userId) as { balance: number } | undefined;
+      const userResult = await tx.execute({
+        sql: 'SELECT balance FROM users WHERE id = ?',
+        args: [userId]
+      });
+      const user = userResult.rows[0] as unknown as { balance: number } | undefined;
 
       if (!user) throw new Error('User not found');
 
@@ -33,51 +46,77 @@ export async function POST(request: Request) {
         if (user.balance < totalValue) throw new Error('Insufficient funds');
 
         // Update balance
-        db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalValue, userId);
+        await tx.execute({
+          sql: 'UPDATE users SET balance = balance - ? WHERE id = ?',
+          args: [totalValue, userId]
+        });
 
         // Update portfolio
-        const portfolioStmt = db.prepare('SELECT shares, average_price FROM portfolio WHERE user_id = ? AND symbol = ?');
-        const holding = portfolioStmt.get(userId, symbol) as { shares: number, average_price: number } | undefined;
+        const portfolioResult = await tx.execute({
+          sql: 'SELECT shares, average_price FROM portfolio WHERE user_id = ? AND symbol = ?',
+          args: [userId, symbol]
+        });
+        const holding = portfolioResult.rows[0] as unknown as { shares: number, average_price: number } | undefined;
 
         if (holding) {
           const newShares = holding.shares + shares;
           const newAvg = ((holding.shares * holding.average_price) + totalValue) / newShares;
-          db.prepare('UPDATE portfolio SET shares = ?, average_price = ? WHERE user_id = ? AND symbol = ?')
-            .run(newShares, newAvg, userId, symbol);
+          await tx.execute({
+            sql: 'UPDATE portfolio SET shares = ?, average_price = ? WHERE user_id = ? AND symbol = ?',
+            args: [newShares, newAvg, userId, symbol]
+          });
         } else {
-          db.prepare('INSERT INTO portfolio (user_id, symbol, shares, average_price) VALUES (?, ?, ?, ?)')
-            .run(userId, symbol, shares, currentPrice);
+          await tx.execute({
+            sql: 'INSERT INTO portfolio (user_id, symbol, shares, average_price) VALUES (?, ?, ?, ?)',
+            args: [userId, symbol, shares, currentPrice]
+          });
         }
 
       } else if (type === 'SELL') {
-        const portfolioStmt = db.prepare('SELECT shares FROM portfolio WHERE user_id = ? AND symbol = ?');
-        const holding = portfolioStmt.get(userId, symbol) as { shares: number } | undefined;
+        const portfolioResult = await tx.execute({
+          sql: 'SELECT shares FROM portfolio WHERE user_id = ? AND symbol = ?',
+          args: [userId, symbol]
+        });
+        const holding = portfolioResult.rows[0] as unknown as { shares: number } | undefined;
 
         if (!holding || holding.shares < shares) throw new Error('Insufficient shares');
 
         // Update balance
-        db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalValue, userId);
+        await tx.execute({
+          sql: 'UPDATE users SET balance = balance + ? WHERE id = ?',
+          args: [totalValue, userId]
+        });
 
         // Update portfolio
         if (holding.shares === shares) {
-          db.prepare('DELETE FROM portfolio WHERE user_id = ? AND symbol = ?').run(userId, symbol);
+          await tx.execute({
+            sql: 'DELETE FROM portfolio WHERE user_id = ? AND symbol = ?',
+            args: [userId, symbol]
+          });
         } else {
-          db.prepare('UPDATE portfolio SET shares = shares - ? WHERE user_id = ? AND symbol = ?')
-            .run(shares, userId, symbol);
+          await tx.execute({
+            sql: 'UPDATE portfolio SET shares = shares - ? WHERE user_id = ? AND symbol = ?',
+            args: [shares, userId, symbol]
+          });
         }
       } else {
         throw new Error('Invalid trade type');
       }
 
       // Record transaction
-      db.prepare('INSERT INTO transactions (user_id, symbol, type, shares, price) VALUES (?, ?, ?, ?, ?)')
-        .run(userId, symbol, type, shares, currentPrice);
+      await tx.execute({
+        sql: 'INSERT INTO transactions (user_id, symbol, type, shares, price) VALUES (?, ?, ?, ?, ?)',
+        args: [userId, symbol, type, shares, currentPrice]
+      });
 
-      return { success: true, currentPrice, totalValue };
-    });
+      await tx.commit();
+      return NextResponse.json({ success: true, currentPrice, totalValue });
 
-    const result = transaction();
-    return NextResponse.json(result);
+    } catch (error: any) {
+      await tx.rollback();
+      console.error('Trade transaction error:', error);
+      return NextResponse.json({ error: error.message || 'Failed to execute trade' }, { status: 400 });
+    }
 
   } catch (error: any) {
     console.error('Trade error:', error);
