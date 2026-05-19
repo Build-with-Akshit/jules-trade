@@ -5,6 +5,15 @@ import { useRouter } from 'next/navigation';
 import { Search, TrendingUp, TrendingDown, BookOpen, Briefcase, FileText } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
+function formatMarketState(state: string) {
+  if (!state) return 'CLOSED';
+  const cleanState = state.toUpperCase();
+  if (cleanState === 'REGULAR') return 'OPEN';
+  if (cleanState.startsWith('PRE')) return 'PRE-MARKET';
+  if (cleanState.startsWith('POST')) return 'CLOSED';
+  return cleanState;
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -266,7 +275,7 @@ export default function Dashboard() {
                       <div className="flex items-center space-x-2">
                         {result.marketState && (
                           <span className={`text-[10px] font-bold px-2 py-1 rounded border ${result.marketState === 'REGULAR' ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:border-green-800' : 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800'}`}>
-                            {result.marketState === 'REGULAR' ? '🟢 OPEN' : `🟠 ${result.marketState}`}
+                            {result.marketState === 'REGULAR' ? '🟢 OPEN' : `🟠 ${formatMarketState(result.marketState)}`}
                           </span>
                         )}
                         <span className="text-xs bg-gray-100 text-gray-500 dark:text-gray-400 px-2 py-1 rounded border dark:border-gray-600 dark:bg-gray-700">{result.quoteType}</span>
@@ -291,7 +300,7 @@ export default function Dashboard() {
                       {selectedAsset.marketState === 'REGULAR' ? (
                         <span className="text-xs text-green-700 font-medium px-2 py-1 bg-green-100 rounded-full inline-block mt-2 border border-green-200">🟢 Market Open</span>
                       ) : (
-                        <span className="text-xs text-orange-700 font-medium px-2 py-1 bg-orange-100 rounded-full inline-block mt-2 border border-orange-200">🟠 Market {selectedAsset.marketState || 'CLOSED'}</span>
+                        <span className="text-xs text-orange-700 font-medium px-2 py-1 bg-orange-100 rounded-full inline-block mt-2 border border-orange-200">🟠 Market {formatMarketState(selectedAsset.marketState)}</span>
                       )}
                     </div>
                     <div className="text-right mt-1 mr-4">
