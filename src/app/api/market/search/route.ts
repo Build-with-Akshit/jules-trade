@@ -24,8 +24,22 @@ export async function GET(request: Request) {
 
   try {
     const results = await yahooFinance.search(query);
-    // @ts-ignore
-    return NextResponse.json(results.quotes || []);
+    let quotes = (results.quotes || []).slice(0, 5); // take top 5
+
+    // Fetch full quotes to get the live marketState for the search dropdown
+    if (quotes.length > 0) {
+      const fullQuotes = await Promise.all(
+        quotes.map((q: any) => yahooFinance.quote(q.symbol).catch(() => null))
+      );
+      quotes = quotes.map((q: any, i: number) => {
+        if (fullQuotes[i]) {
+          q.marketState = fullQuotes[i].marketState;
+        }
+        return q;
+      });
+    }
+
+    return NextResponse.json(quotes);
   } catch (error) {
     console.warn('Market search error from Yahoo Finance, falling back to static list:', error);
     const matchedFallbacks = fallbacks.filter(f =>

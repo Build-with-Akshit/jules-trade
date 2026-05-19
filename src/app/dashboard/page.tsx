@@ -238,7 +238,7 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-8">
 
             {/* Trade & Search */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:border dark:border-gray-700 p-6 relative">
               <h2 className="text-xl font-bold mb-4">Trade Assets</h2>
               <form onSubmit={handleSearchSubmit} className="relative flex items-center">
                 <input
@@ -256,14 +256,21 @@ export default function Dashboard() {
               {errorMsg && <p className="text-sm text-red-600 mt-2">{errorMsg}</p>}
 
               {searchResults.length > 0 && (
-                <ul className="mt-2 border rounded-md divide-y dark:divide-gray-700 max-h-60 overflow-y-auto bg-white absolute w-[calc(100%-4rem)] z-10 shadow-lg">
+                <ul className="mt-2 border rounded-md divide-y dark:divide-gray-700 max-h-60 overflow-y-auto bg-white dark:bg-gray-800 absolute left-6 right-6 z-10 shadow-lg">
                   {searchResults.map((result: any, i) => (
                     <li key={i} onClick={() => selectAsset(result.symbol)} className="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center transition">
                       <div>
                         <span className="font-bold text-blue-600">{result.symbol}</span>
                         <span className="ml-2 text-sm text-gray-600">{result.shortname || result.longname}</span>
                       </div>
-                      <span className="text-xs bg-gray-100 text-gray-500 dark:text-gray-400 px-2 py-1 rounded border">{result.quoteType}</span>
+                      <div className="flex items-center space-x-2">
+                        {result.marketState && (
+                          <span className={`text-[10px] font-bold px-2 py-1 rounded border ${result.marketState === 'REGULAR' ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:border-green-800' : 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800'}`}>
+                            {result.marketState === 'REGULAR' ? '🟢 OPEN' : `🟠 ${result.marketState}`}
+                          </span>
+                        )}
+                        <span className="text-xs bg-gray-100 text-gray-500 dark:text-gray-400 px-2 py-1 rounded border dark:border-gray-600 dark:bg-gray-700">{result.quoteType}</span>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -433,7 +440,10 @@ export default function Dashboard() {
                   <li className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No transactions yet.</li>
                 ) : (
                   portfolio?.transactions?.map((t: any, i: number) => (
-                    <li key={i} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50">
+                    <li key={i} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" onClick={() => {
+                      selectAsset(t.symbol);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}>
                       <div>
                         <p className="text-sm font-bold">
                           <span className={t.type === 'BUY' ? 'text-green-600' : 'text-red-600'}>{t.type}</span> {t.symbol}
