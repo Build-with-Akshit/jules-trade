@@ -127,7 +127,7 @@ export async function processPendingOrders(userId: number) {
           const underlyingPrice = underlyingQuote.regularMarketPrice;
           const underlyingPrevClose = underlyingQuote.regularMarketPreviousClose || underlyingPrice;
           if (underlyingPrice) {
-            const optQuote = getSimulatedOptionQuoteFromUnderlying(order.symbol, underlyingPrice, underlyingPrevClose);
+            const optQuote = getSimulatedOptionQuoteFromUnderlying(order.symbol, underlyingPrice, underlyingPrevClose, underlyingQuote.marketState || 'REGULAR');
             currentPrice = optQuote?.regularMarketPrice || 0;
           }
         } else {
@@ -240,7 +240,7 @@ export async function POST(request: Request) {
         marketState = liveUnderlying?.marketState || 'REGULAR';
         
         if (underlyingPrice) {
-          const optQuote = getSimulatedOptionQuoteFromUnderlying(symbol, underlyingPrice, underlyingPrevClose);
+          const optQuote = getSimulatedOptionQuoteFromUnderlying(symbol, underlyingPrice, underlyingPrevClose, marketState);
           currentPrice = optQuote?.regularMarketPrice || 0;
         }
       } else {

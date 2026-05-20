@@ -87,6 +87,7 @@ export default function Dashboard() {
   // Real-time polling effect
   useEffect(() => {
     if (!user) return;
+    let isCurrent = true;
 
     const intervalId = setInterval(() => {
       // Refresh portfolio silently
@@ -97,7 +98,7 @@ export default function Dashboard() {
         fetch(`/api/market/quote?symbol=${selectedAsset.symbol}`)
           .then(res => res.json())
           .then(data => {
-            if (!data.error) {
+            if (isCurrent && !data.error) {
               setSelectedAsset(data);
             }
           })
@@ -105,7 +106,10 @@ export default function Dashboard() {
       }
     }, 200); // Update every 200ms for ultra real-time feel
 
-    return () => clearInterval(intervalId);
+    return () => {
+      isCurrent = false;
+      clearInterval(intervalId);
+    };
   }, [user, selectedAsset]);
 
   // Fetch Option Chain when selected asset tab or selected expiry changes

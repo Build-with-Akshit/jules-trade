@@ -300,7 +300,8 @@ export function parseSimulatedOptionSymbol(symbol: string) {
 export function getSimulatedOptionQuoteFromUnderlying(
   symbol: string,
   underlyingPrice: number,
-  underlyingPrevClose: number
+  underlyingPrevClose: number,
+  marketState: string = 'REGULAR'
 ) {
   const parsed = parseSimulatedOptionSymbol(symbol);
   if (!parsed) return null;
@@ -331,6 +332,6 @@ export function getSimulatedOptionQuoteFromUnderlying(
     strike: parsed.strike,
     optionsType: parsed.type === 'CE' ? 'Call' : 'Put',
     greeks: currentGreeks,
-    marketState: 'REGULAR'
+    marketState
   };
 }
