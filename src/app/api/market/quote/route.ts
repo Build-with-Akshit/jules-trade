@@ -20,12 +20,13 @@ export async function GET(request: Request) {
       const underlyingQuote = await yahooFinance.quote(underlyingSymbol);
       const underlyingPrice = underlyingQuote.regularMarketPrice;
       const underlyingPrevClose = underlyingQuote.regularMarketPreviousClose || underlyingPrice;
+      const underlyingMarketState = underlyingQuote.marketState || 'REGULAR';
       
       if (!underlyingPrice) {
         return NextResponse.json({ error: 'Failed to get underlying price' }, { status: 400 });
       }
       
-      const optionQuote = getSimulatedOptionQuoteFromUnderlying(symbol, underlyingPrice, underlyingPrevClose);
+      const optionQuote = getSimulatedOptionQuoteFromUnderlying(symbol, underlyingPrice, underlyingPrevClose, underlyingMarketState);
       if (!optionQuote) {
         return NextResponse.json({ error: 'Failed to parse option symbol' }, { status: 400 });
       }

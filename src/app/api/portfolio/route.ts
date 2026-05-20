@@ -59,7 +59,7 @@ export async function GET(request: Request) {
               const underlyingPrevClose = underlyingQuote.regularMarketPreviousClose || underlyingPrice;
               
               if (underlyingPrice) {
-                const optQuote = getSimulatedOptionQuoteFromUnderlying(holding.symbol, underlyingPrice, underlyingPrevClose);
+                const optQuote = getSimulatedOptionQuoteFromUnderlying(holding.symbol, underlyingPrice, underlyingPrevClose, underlyingQuote.marketState || 'REGULAR');
                 currentPriceNative = optQuote?.regularMarketPrice || currentPriceNative;
               }
             } else {
@@ -138,7 +138,7 @@ export async function GET(request: Request) {
             const underlyingPrevClose = liveQ?.regularMarketPreviousClose || underlyingPrice;
             
             if (underlyingPrice) {
-              const optQuote = getSimulatedOptionQuoteFromUnderlying(po.symbol, underlyingPrice, underlyingPrevClose);
+              const optQuote = getSimulatedOptionQuoteFromUnderlying(po.symbol, underlyingPrice, underlyingPrevClose, liveQ?.marketState || 'REGULAR');
               currentPriceNative = optQuote?.regularMarketPrice || currentPriceNative;
             }
           } else {
