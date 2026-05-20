@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     const result = await db.execute({
-      sql: 'SELECT id, login_code, balance, language, experience_level FROM users WHERE login_code = ?',
+      sql: 'SELECT id, login_code, balance, language, experience_level, currency FROM users WHERE login_code = ?',
       args: [loginCode.toUpperCase()]
     });
     const user = result.rows[0];

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST } from './route';
+import { POST, PUT } from './route';
 
 // Mock dependencies
 vi.mock('next/server', () => ({
@@ -9,6 +9,7 @@ vi.mock('next/server', () => ({
 }));
 
 const executeMock = vi.fn();
+const dbExecuteMock = vi.fn();
 const commitMock = vi.fn();
 const rollbackMock = vi.fn();
 const transactionMock = vi.fn().mockResolvedValue({
@@ -19,7 +20,8 @@ const transactionMock = vi.fn().mockResolvedValue({
 
 vi.mock('@/lib/db', () => ({
   default: {
-    transaction: (...args: any[]) => transactionMock(...args)
+    transaction: (...args: any[]) => transactionMock(...args),
+    execute: (...args: any[]) => dbExecuteMock(...args)
   }
 }));
 
@@ -171,5 +173,49 @@ describe('Trade API Route - BUY logic', () => {
     expect(response.data).toEqual({ error: 'Invalid input' });
     expect(response.init?.status).toBe(400);
     expect(mockQuote).not.toHaveBeenCalled();
+  });
+});
+
+describe('Trade API Route - PUT logic', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const createRequest = (body: any) => ({
+    json: async () => body,
+  } as Request);
+
+  it('should modify a pending order successfully', async () => {
+    dbExecuteMock
+      .mockResolvedValueOnce({ rows: [{ status: 'PENDING' }] }) // checkOrder query
+      .mockResolvedValueOnce({ rows: [] }) // update query
+      .mockResolvedValueOnce({ rows: [] }); // processPendingOrders query
+
+    const request = createRequest({
+      orderId: 123,
+      userId: 1,
+      shares: 50,
+      price: 150.5
+    });
+
+    const response = await PUT(request) as any;
+    expect(response.data).toEqual({ success: true });
+    
+    const updateCall = dbExecuteMock.mock.calls.find(c => c[0].sql.includes('UPDATE pending_orders'));
+    expect(updateCall).toBeDefined();
+    expect(updateCall[0].args).toEqual([50, 150.5, 123, 1]);
+  });
+
+  it('should return 400 if validation fails', async () => {
+    const request = createRequest({
+      orderId: 123,
+      userId: 1,
+      shares: -10,
+      price: 150.5
+    });
+
+    const response = await PUT(request) as any;
+    expect(response.data).toEqual({ error: 'Shares and price must be greater than zero' });
+    expect(response.init?.status).toBe(400);
   });
 });

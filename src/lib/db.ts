@@ -24,9 +24,16 @@ export async function initDb() {
       balance REAL DEFAULT 100000.00,
       language TEXT DEFAULT 'English',
       experience_level TEXT DEFAULT 'Beginner',
+      currency TEXT DEFAULT 'USD',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  try {
+    await db.execute(`ALTER TABLE users ADD COLUMN currency TEXT DEFAULT 'USD'`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS portfolio (
@@ -49,6 +56,21 @@ export async function initDb() {
       shares REAL NOT NULL,
       price REAL NOT NULL,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users (id)
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS pending_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      symbol TEXT NOT NULL,
+      type TEXT NOT NULL, -- 'BUY' or 'SELL'
+      order_type TEXT NOT NULL, -- 'LIMIT' or 'STOP_LOSS'
+      shares REAL NOT NULL,
+      price REAL NOT NULL,
+      status TEXT DEFAULT 'PENDING', -- 'PENDING', 'EXECUTED', 'CANCELLED'
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users (id)
     )
   `);
