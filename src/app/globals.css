@@ -3,6 +3,25 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  --gray-950: #030712;
+  --gray-900: #111827;
+  --gray-800: #1f2937;
+  --gray-700: #374151;
+  --gray-600: #4b5563;
+  --gray-500: #6b7280;
+  --gray-400: #9ca3af;
+  --gray-300: #d1d5db;
+  --gray-200: #e5e7eb;
+  --gray-100: #f3f4f6;
+  --gray-50: #f9fafb;
+  
+  --blue-900: #1e3a8a;
+  --blue-800: #1e40af;
+  --blue-700: #1d4ed8;
+  --blue-600: #2563eb;
+  --blue-500: #3b82f6;
+  --blue-400: #60a5fa;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -12,14 +31,51 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+  /* Map standard colors dynamically */
+  --color-gray-950: var(--gray-950);
+  --color-gray-900: var(--gray-900);
+  --color-gray-800: var(--gray-800);
+  --color-gray-700: var(--gray-700);
+  --color-gray-600: var(--gray-600);
+  --color-gray-500: var(--gray-500);
+  --color-gray-400: var(--gray-400);
+  --color-gray-300: var(--gray-300);
+  --color-gray-200: var(--gray-200);
+  --color-gray-100: var(--gray-100);
+  --color-gray-50: var(--gray-50);
+  
+  --color-blue-900: var(--blue-900);
+  --color-blue-800: var(--blue-800);
+  --color-blue-700: var(--blue-700);
+  --color-blue-600: var(--blue-600);
+  --color-blue-500: var(--blue-500);
+  --color-blue-400: var(--blue-400);
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #0a0e14; /* Deep charcoal-slate-teal mix base */
+  --foreground: #e2e8f0;
+  
+  --gray-950: #06080b;
+  --gray-900: #0a0e14; /* Deep slate base */
+  --gray-800: #10161f; /* Card background */
+  --gray-700: #1d2735; /* Borders */
+  --gray-600: #334155;
+  --gray-500: #64748b;
+  --gray-400: #94a3b8; /* Slate text secondary */
+  --gray-300: #cbd5e1;
+  --gray-200: #e2e8f0;
+  --gray-100: #f1f5f9;
+  --gray-50: #0f172a;
+  
+  --blue-900: #0a2d3d; /* deep cyan-blue */
+  --blue-800: #0f3d54;
+  --blue-700: #00b4d8;
+  --blue-600: #00d2f1; /* Electric cyan */
+  --blue-500: #33e0ff;
+  --blue-400: #7fdbca;
 }
-
-
 
 body {
   background: var(--background);
