@@ -32,6 +32,32 @@ export default function Course() {
   const [apiKey, setApiKey] = useState('');
   const [hasKey, setHasKey] = useState(false);
 
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('#ai-settings-toggle')) {
+          setShowSettings(false);
+        }
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setShowSettings(false);
+      }
+    }
+    if (showSettings) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showSettings]);
+
   // Course Content
   const [expandedModule, setExpandedModule] = useState<number | null>(0);
 
@@ -231,7 +257,7 @@ export default function Course() {
                 GOAT Notes
               </button>
               <ThemeToggle />
-              <button onClick={() => setShowSettings(!showSettings)} className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center">
+              <button id="ai-settings-toggle" onClick={() => setShowSettings(!showSettings)} className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center">
                 <Settings className="w-5 h-5 mr-1" />
                 AI Settings
               </button>
@@ -242,30 +268,30 @@ export default function Course() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="absolute right-4 top-20 bg-white border shadow-xl rounded-lg p-6 z-50 w-80">
+        <div ref={settingsRef} className="absolute right-4 top-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-lg p-6 z-50 w-80 text-gray-900 dark:text-gray-100">
            <h3 className="font-bold text-lg mb-4">Bring Your Own Key (BYOK)</h3>
            <div className="space-y-4">
               <div>
-                 <label className="block text-sm font-medium text-gray-700">AI Provider</label>
+                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">AI Provider</label>
                  <select
                     value={provider}
                     onChange={(e) => setProvider(e.target.value)}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black"
+                    className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black dark:text-white bg-white dark:bg-gray-900 font-medium"
                  >
-                    <option value="openai">OpenAI (ChatGPT)</option>
-                    <option value="anthropic">Anthropic (Claude)</option>
-                    <option value="google">Google (Gemini)</option>
-                    <option value="openrouter">OpenRouter (Any)</option>
+                    <option value="openai" className="bg-white dark:bg-gray-900 text-black dark:text-white">OpenAI (ChatGPT)</option>
+                    <option value="anthropic" className="bg-white dark:bg-gray-900 text-black dark:text-white">Anthropic (Claude)</option>
+                    <option value="google" className="bg-white dark:bg-gray-900 text-black dark:text-white">Google (Gemini)</option>
+                    <option value="openrouter" className="bg-white dark:bg-gray-900 text-black dark:text-white">OpenRouter (Any)</option>
                  </select>
               </div>
               <div>
-                 <label className="block text-sm font-medium text-gray-700">API Key</label>
+                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
                  <input
                     type="password"
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="sk-..."
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black dark:text-white bg-white dark:bg-gray-900"
                  />
               </div>
               <button
@@ -277,7 +303,7 @@ export default function Course() {
               {hasKey && (
                 <button
                   onClick={clearApiKey}
-                  className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 mt-2"
+                  className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 mt-2"
                 >
                   Clear Key
                 </button>
@@ -289,20 +315,20 @@ export default function Course() {
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* Left Column: Structured Notes */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 overflow-y-auto max-h-[calc(100vh-120px)]">
-           <h2 className="text-2xl font-bold mb-6 text-blue-800 border-b pb-2">Trading Course</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 overflow-y-auto max-h-[calc(100vh-120px)]">
+           <h2 className="text-2xl font-bold mb-6 text-blue-800 dark:text-blue-400 border-b border-gray-200 dark:border-gray-700 pb-2">Trading Course</h2>
            <div className="space-y-4">
               {modules.map((mod, i) => (
-                 <div key={i} className="border rounded-lg overflow-hidden">
+                 <div key={i} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                     <button
                        onClick={() => setExpandedModule(expandedModule === i ? null : i)}
-                       className="w-full px-4 py-3 bg-gray-50 flex justify-between items-center hover:bg-gray-100 transition text-left font-bold"
+                       className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 flex justify-between items-center hover:bg-gray-100 dark:hover:bg-gray-800/80 transition text-left font-bold text-gray-900 dark:text-white"
                     >
                        {mod.title}
-                       {expandedModule === i ? <ChevronUp className="w-5 h-5 text-gray-500"/> : <ChevronDown className="w-5 h-5 text-gray-500"/>}
+                       {expandedModule === i ? <ChevronUp className="w-5 h-5 text-gray-500 dark:text-gray-400"/> : <ChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400"/>}
                     </button>
                     {expandedModule === i && (
-                       <div className="p-4 bg-white whitespace-pre-line text-sm text-gray-700 leading-relaxed border-t">
+                       <div className="p-4 bg-white dark:bg-gray-800 whitespace-pre-line text-sm text-gray-700 dark:text-gray-300 leading-relaxed border-t border-gray-200 dark:border-gray-700">
                           {mod.content}
                        </div>
                     )}
@@ -313,7 +339,7 @@ export default function Course() {
 
         {/* Right Column: AI Chat */}
         <div className="flex flex-col h-full max-h-[calc(100vh-120px)]">
-            <div className="flex-1 bg-white rounded-t-lg shadow-sm border p-4 overflow-y-auto">
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-t-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
             {errorMsg && (
                 <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm text-center">
                 {errorMsg}
@@ -325,7 +351,7 @@ export default function Course() {
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
                     m.role === 'user'
                     ? 'bg-blue-600 text-white rounded-tr-none'
-                    : 'bg-gray-100 text-gray-900 rounded-tl-none border'
+                    : 'bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-tl-none border border-gray-200 dark:border-gray-700'
                 }`}>
                     <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.content}</p>
                 </div>
@@ -333,7 +359,7 @@ export default function Course() {
             ))}
             {isLoading && (
                 <div className="flex justify-start mb-4">
-                <div className="bg-gray-100 text-gray-500 rounded-2xl rounded-tl-none px-4 py-3 text-sm flex items-center">
+                <div className="bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 rounded-2xl rounded-tl-none px-4 py-3 text-sm flex items-center">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mr-1"></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mr-1" style={{animationDelay: '0.1s'}}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
@@ -348,7 +374,7 @@ export default function Course() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={hasKey ? "Ask about the course..." : "Set API Key to ask questions..."}
-                className="w-full pl-4 pr-12 py-4 rounded-b-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-black bg-white"
+                className="w-full pl-4 pr-12 py-4 rounded-b-lg border border-gray-200 dark:border-gray-700 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-black dark:text-white bg-white dark:bg-gray-900"
                 disabled={isLoading}
             />
             <button
