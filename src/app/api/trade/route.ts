@@ -196,6 +196,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
     }
 
+    // Share limit validation for SELL orders (Market & Pending)
+    if (type === 'SELL') {
+      const portfolioResult = await db.execute({
+        sql: 'SELECT shares FROM portfolio WHERE user_id = ? AND symbol = ?',
+        args: [userId, symbol]
+      });
+      const holding = portfolioResult.rows[0] as unknown as { shares: number } | undefined;
+      const ownedShares = holding ? holding.shares : 0;
+
+      if (ownedShares <= 0) {
+        return NextResponse.json({ error: 'You do not own any shares of this asset to sell.' }, { status: 400 });
+      }
+
+      // Check shares already locked in pending SELL orders
+      const pendingResult = await db.execute({
+        sql: "SELECT SUM(shares) as total FROM pending_orders WHERE user_id = ? AND symbol = ? AND type = 'SELL' AND status = 'PENDING'",
+        args: [userId, symbol]
+      });
+      const pendingRow = pendingResult.rows[0] as unknown as { total: number | null } | undefined;
+      const pendingSellShares = pendingRow?.total || 0;
+
+      if (shares + pendingSellShares > ownedShares) {
+        const availableShares = ownedShares - pendingSellShares;
+        return NextResponse.json({
+          error: `Insufficient available shares. You own ${ownedShares} share(s) but already have ${pendingSellShares} share(s) locked in pending sell orders. Available to sell: ${availableShares}`
+        }, { status: 400 });
+      }
+    }
+
     // Determine current market price
     let currentPrice = 0;
     let marketState = 'REGULAR';
@@ -326,7 +355,7 @@ export async function PUT(request: Request) {
 
     // Check if the order is still PENDING
     const checkOrder = await db.execute({
-      sql: "SELECT status FROM pending_orders WHERE id = ? AND user_id = ?",
+      sql: "SELECT symbol, type, status FROM pending_orders WHERE id = ? AND user_id = ?",
       args: [orderId, userId]
     });
     const order = checkOrder.rows[0] as any;
@@ -335,6 +364,32 @@ export async function PUT(request: Request) {
     }
     if (order.status !== 'PENDING') {
       return NextResponse.json({ error: `Cannot modify order because it is already ${order.status.toLowerCase()}` }, { status: 400 });
+    }
+
+    // Share limit validation for modifying pending SELL orders
+    if (order.type === 'SELL') {
+      const symbol = order.symbol;
+      const portfolioResult = await db.execute({
+        sql: 'SELECT shares FROM portfolio WHERE user_id = ? AND symbol = ?',
+        args: [userId, symbol]
+      });
+      const holding = portfolioResult.rows[0] as unknown as { shares: number } | undefined;
+      const ownedShares = holding ? holding.shares : 0;
+
+      // Sum shares locked in other pending orders (excluding the one being modified)
+      const pendingResult = await db.execute({
+        sql: "SELECT SUM(shares) as total FROM pending_orders WHERE user_id = ? AND symbol = ? AND type = 'SELL' AND status = 'PENDING' AND id != ?",
+        args: [userId, symbol, orderId]
+      });
+      const pendingRow = pendingResult.rows[0] as unknown as { total: number | null } | undefined;
+      const pendingSellShares = pendingRow?.total || 0;
+
+      if (Number(shares) + pendingSellShares > ownedShares) {
+        const availableShares = ownedShares - pendingSellShares;
+        return NextResponse.json({
+          error: `Insufficient available shares. You own ${ownedShares} share(s) but already have ${pendingSellShares} share(s) locked in other pending sell orders. Max modify limit: ${availableShares}`
+        }, { status: 400 });
+      }
     }
 
     await db.execute({

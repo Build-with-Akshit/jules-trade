@@ -7,6 +7,7 @@
   --gray-950: #030712;
   --gray-900: #111827;
   --gray-800: #1f2937;
+  --gray-750: #e5e7eb;
   --gray-700: #374151;
   --gray-600: #4b5563;
   --gray-500: #6b7280;
@@ -36,6 +37,7 @@
   --color-gray-950: var(--gray-950);
   --color-gray-900: var(--gray-900);
   --color-gray-800: var(--gray-800);
+  --color-gray-750: var(--gray-750);
   --color-gray-700: var(--gray-700);
   --color-gray-600: var(--gray-600);
   --color-gray-500: var(--gray-500);
@@ -60,6 +62,7 @@
   --gray-950: #06080b;
   --gray-900: #0a0e14; /* Deep slate base */
   --gray-800: #10161f; /* Card background */
+  --gray-750: #161e2b; /* Slightly lighter card background */
   --gray-700: #1d2735; /* Borders */
   --gray-600: #334155;
   --gray-500: #64748b;

@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [activeAssetTab, setActiveAssetTab] = useState<'trade' | 'options'>('trade');
   
   // Trade setup state
-  const [tradeShares, setTradeShares] = useState(1);
+  const [tradeShares, setTradeShares] = useState<string>('1');
   const [tradeOrderType, setTradeOrderType] = useState<'MARKET' | 'LIMIT' | 'STOP_LOSS'>('MARKET');
   const [tradePrice, setTradePrice] = useState<string>('');
   
@@ -48,6 +48,8 @@ export default function Dashboard() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isExecutingTrade, setIsExecutingTrade] = useState(false);
+  const [isModifyingOrder, setIsModifyingOrder] = useState(false);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function Dashboard() {
           })
           .catch(err => console.error("Real-time quote error:", err));
       }
-    }, 5000); // Update every 5 seconds for a real-time feel
+    }, 200); // Update every 200ms for ultra real-time feel
 
     return () => clearInterval(intervalId);
   }, [user, selectedAsset]);
@@ -189,7 +191,7 @@ export default function Dashboard() {
           setActiveAssetTab('trade');
           setOptionChain(null);
           setSelectedExpiry('');
-          setTradeShares(1);
+          setTradeShares('1');
           setTradeOrderType('MARKET');
           setTradePrice('');
           setSearchResults([]);
@@ -215,13 +217,15 @@ export default function Dashboard() {
   };
 
   const executeTrade = async (type: 'BUY' | 'SELL') => {
-    if (!user || !selectedAsset) return;
+    if (!user || !selectedAsset || isExecutingTrade) return;
+    setIsExecutingTrade(true);
 
     const isPendingOrder = tradeOrderType !== 'MARKET';
     const targetPrice = isPendingOrder ? parseFloat(tradePrice) : undefined;
 
     if (isPendingOrder && (!targetPrice || targetPrice <= 0)) {
       alert('Please enter a valid price for Limit or Stop Loss orders.');
+      setIsExecutingTrade(false);
       return;
     }
 
@@ -259,6 +263,8 @@ export default function Dashboard() {
       }
     } catch (err) {
       alert('Trade failed');
+    } finally {
+      setIsExecutingTrade(false);
     }
   };
 
@@ -295,10 +301,12 @@ export default function Dashboard() {
   };
 
   const submitModifyOrder = async () => {
-    if (!user || !modifyingOrder) return;
+    if (!user || !modifyingOrder || isModifyingOrder) return;
+    setIsModifyingOrder(true);
 
     if (modifyShares <= 0 || !modifyPrice || parseFloat(modifyPrice) <= 0) {
       alert('Please enter valid shares and target price.');
+      setIsModifyingOrder(false);
       return;
     }
 
@@ -323,6 +331,8 @@ export default function Dashboard() {
       }
     } catch (err) {
       alert('Failed to modify order');
+    } finally {
+      setIsModifyingOrder(false);
     }
   };
 
@@ -357,7 +367,7 @@ export default function Dashboard() {
       } else {
         setSelectedAsset(data);
         setActiveAssetTab('trade');
-        setTradeShares(1);
+        setTradeShares('1');
         setTradeOrderType('MARKET');
         setTradePrice('');
       }
@@ -445,9 +455,9 @@ export default function Dashboard() {
                 <FileText className="w-4 h-4 mr-1" />
                 GOAT Notes
               </button>
-              <button onClick={() => router.push('/course')} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 flex items-center">
+              <button onClick={() => router.push('/course')} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-500 flex items-center px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-full border border-blue-100 dark:border-blue-800 transition">
                 <BookOpen className="w-4 h-4 mr-1" />
-                AI Course
+                AI Course & Mentor
               </button>
               <button onClick={logout} className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">Logout</button>
               <button onClick={deleteAccount} className="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Delete Account</button>
@@ -516,7 +526,7 @@ export default function Dashboard() {
                   autoComplete="off"
                 />
                 <Search className="absolute left-3 w-5 h-5 text-gray-400" />
-                <button type="submit" className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Search</button>
+                <button type="submit" className="ml-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 text-white dark:text-gray-200 border border-transparent dark:border-gray-700 rounded-md transition font-semibold shadow-sm">Search</button>
               </form>
 
               {errorMsg && <p className="text-sm text-red-600 mt-2">{errorMsg}</p>}
@@ -622,21 +632,29 @@ export default function Dashboard() {
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Order Type</label>
                           <div className="grid grid-cols-3 gap-2">
-                            {['MARKET', 'LIMIT', 'STOP_LOSS'].map((oType) => (
-                              <button
-                                key={oType}
-                                type="button"
-                                onClick={() => {
-                                  setTradeOrderType(oType as any);
-                                  if (oType !== 'MARKET' && !tradePrice) {
-                                    setTradePrice(convertAmountFrontend(selectedAsset.regularMarketPrice, selectedAsset.currency, userCurrency).toFixed(2));
-                                  }
-                                }}
-                                className={`py-2 text-xs font-bold rounded-lg border transition ${tradeOrderType === oType ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500' : 'bg-white text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
-                              >
-                                {oType === 'STOP_LOSS' ? 'STOP LOSS (SL)' : oType}
-                              </button>
-                            ))}
+                            {(['MARKET', 'LIMIT', 'STOP_LOSS'] as const).map((oType) => {
+                              const activeColors: Record<string, string> = {
+                                MARKET: 'bg-emerald-600 text-white border-emerald-600 dark:bg-emerald-500 dark:border-emerald-500 shadow-md',
+                                LIMIT: 'bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-500 dark:border-indigo-500 shadow-md',
+                                STOP_LOSS: 'bg-amber-500 text-white border-amber-500 dark:bg-amber-500 dark:border-amber-500 shadow-md',
+                              };
+                              const inactiveColor = 'bg-white text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700';
+                              return (
+                                <button
+                                  key={oType}
+                                  type="button"
+                                  onClick={() => {
+                                    setTradeOrderType(oType);
+                                    if (oType !== 'MARKET' && !tradePrice) {
+                                      setTradePrice(convertAmountFrontend(selectedAsset.regularMarketPrice, selectedAsset.currency, userCurrency).toFixed(2));
+                                    }
+                                  }}
+                                  className={`py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${tradeOrderType === oType ? activeColors[oType] : inactiveColor}`}
+                                >
+                                  {oType === 'STOP_LOSS' ? 'STOP LOSS (SL)' : oType}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
 
@@ -644,11 +662,18 @@ export default function Dashboard() {
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Shares/Contracts</label>
                             <input
-                              type="number"
-                              min="1"
-                              step="1"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={tradeShares}
-                              onChange={(e) => setTradeShares(Math.max(1, parseInt(e.target.value) || 1))}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9]/g, '');
+                                setTradeShares(val);
+                              }}
+                              onBlur={() => {
+                                const num = parseInt(tradeShares);
+                                if (!num || num < 1) setTradeShares('1');
+                              }}
                               className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-black dark:text-white bg-white dark:bg-gray-700 dark:border-gray-600"
                             />
                           </div>
@@ -671,17 +696,25 @@ export default function Dashboard() {
                         </div>
 
                         <div className="pt-4 flex space-x-4 border-t dark:border-gray-700">
-                          <button onClick={() => executeTrade('BUY')} className="flex-1 bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 font-bold transition shadow-sm">
-                            {tradeOrderType === 'MARKET' ? 'BUY MARKET' : `PLACE ${tradeOrderType} BUY`}
+                          <button
+                            onClick={() => executeTrade('BUY')}
+                            disabled={isExecutingTrade}
+                            className="flex-1 bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 font-bold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            {isExecutingTrade ? 'Processing...' : (tradeOrderType === 'MARKET' ? 'BUY MARKET' : `PLACE ${tradeOrderType} BUY`)}
                           </button>
-                          <button onClick={() => executeTrade('SELL')} className="flex-1 bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 font-bold transition shadow-sm">
-                            {tradeOrderType === 'MARKET' ? 'SELL MARKET' : `PLACE ${tradeOrderType} SELL`}
+                          <button
+                            onClick={() => executeTrade('SELL')}
+                            disabled={isExecutingTrade}
+                            className="flex-1 bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 font-bold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            {isExecutingTrade ? 'Processing...' : (tradeOrderType === 'MARKET' ? 'SELL MARKET' : `PLACE ${tradeOrderType} SELL`)}
                           </button>
                         </div>
 
                         <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
                           {tradeOrderType === 'MARKET' ? (
-                            `Estimated Total: ${formatCurrency(convertAmountFrontend(selectedAsset.regularMarketPrice * tradeShares, selectedAsset.currency, userCurrency), userCurrency)}`
+                            `Estimated Total: ${formatCurrency(convertAmountFrontend(selectedAsset.regularMarketPrice * (Number(tradeShares) || 1), selectedAsset.currency, userCurrency), userCurrency)}`
                           ) : (
                             `Trigger Price: ${formatCurrency(Number(tradePrice) || 0, userCurrency)} | Quantity: ${tradeShares}`
                           )}
@@ -850,13 +883,13 @@ export default function Dashboard() {
                   >
                     Pending Orders
                     {portfolio?.pendingOrders?.length > 0 && (
-                      <span className="ml-1.5 px-2 py-0.5 text-xs font-semibold bg-blue-600 text-white rounded-full">
+                      <span className="ml-1.5 px-2 py-0.5 text-xs font-bold bg-orange-500 text-white rounded-full shadow-sm">
                         {portfolio.pendingOrders.length}
                       </span>
                     )}
                   </button>
                 </div>
-                <span className="text-xs text-gray-450 dark:text-gray-500">Live Syncing 5s</span>
+                <span className="text-xs text-gray-450 dark:text-gray-500">Live Syncing 200ms</span>
               </div>
 
               {/* Tab 1: Holdings Table */}
@@ -986,15 +1019,7 @@ export default function Dashboard() {
           {/* Right Column: AI mentor teaser & Transaction History */}
           <div className="space-y-8">
             
-            {/* AI Learning teaser */}
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl shadow-md p-6 text-white text-center">
-              <BookOpen className="w-12 h-12 mx-auto mb-4 text-blue-200" />
-              <h2 className="text-xl font-bold mb-2">Personalized Course & AI</h2>
-              <p className="text-blue-100 text-sm mb-4">Learn stock market basics and use any AI model (ChatGPT, Claude, etc) as your personal mentor.</p>
-              <button onClick={() => router.push('/course')} className="w-full bg-white text-blue-600 font-bold py-2.5 px-4 rounded-lg hover:bg-blue-50 transition shadow">
-                Open Learning Center
-              </button>
-            </div>
+
 
             {/* Transaction History sidebar */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
@@ -1046,11 +1071,17 @@ export default function Dashboard() {
                   Shares / Contracts
                 </label>
                 <input
-                  type="number"
-                  min="1"
-                  step="1"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={modifyShares}
-                  onChange={(e) => setModifyShares(Math.max(1, parseInt(e.target.value) || 1))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setModifyShares(val === '' ? 0 : parseInt(val));
+                  }}
+                  onBlur={() => {
+                    if (!modifyShares || modifyShares < 1) setModifyShares(1);
+                  }}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-250 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-bold"
                 />
               </div>
@@ -1083,9 +1114,10 @@ export default function Dashboard() {
               </button>
               <button
                 onClick={submitModifyOrder}
-                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition"
+                disabled={isModifyingOrder}
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                Confirm Modify
+                {isModifyingOrder ? 'Modifying...' : 'Confirm Modify'}
               </button>
             </div>
           </div>

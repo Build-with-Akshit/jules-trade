@@ -32,6 +32,32 @@ export default function Course() {
   const [apiKey, setApiKey] = useState('');
   const [hasKey, setHasKey] = useState(false);
 
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('#ai-settings-toggle')) {
+          setShowSettings(false);
+        }
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setShowSettings(false);
+      }
+    }
+    if (showSettings) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showSettings]);
+
   // Course Content
   const [expandedModule, setExpandedModule] = useState<number | null>(0);
 
@@ -231,7 +257,7 @@ export default function Course() {
                 GOAT Notes
               </button>
               <ThemeToggle />
-              <button onClick={() => setShowSettings(!showSettings)} className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center">
+              <button id="ai-settings-toggle" onClick={() => setShowSettings(!showSettings)} className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center">
                 <Settings className="w-5 h-5 mr-1" />
                 AI Settings
               </button>
@@ -242,7 +268,7 @@ export default function Course() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="absolute right-4 top-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-lg p-6 z-50 w-80 text-gray-900 dark:text-gray-100">
+        <div ref={settingsRef} className="absolute right-4 top-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-lg p-6 z-50 w-80 text-gray-900 dark:text-gray-100">
            <h3 className="font-bold text-lg mb-4">Bring Your Own Key (BYOK)</h3>
            <div className="space-y-4">
               <div>
@@ -250,12 +276,12 @@ export default function Course() {
                  <select
                     value={provider}
                     onChange={(e) => setProvider(e.target.value)}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black dark:text-white bg-white dark:bg-gray-750"
+                    className="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black dark:text-white bg-white dark:bg-gray-900 font-medium"
                  >
-                    <option value="openai">OpenAI (ChatGPT)</option>
-                    <option value="anthropic">Anthropic (Claude)</option>
-                    <option value="google">Google (Gemini)</option>
-                    <option value="openrouter">OpenRouter (Any)</option>
+                    <option value="openai" className="bg-white dark:bg-gray-900 text-black dark:text-white">OpenAI (ChatGPT)</option>
+                    <option value="anthropic" className="bg-white dark:bg-gray-900 text-black dark:text-white">Anthropic (Claude)</option>
+                    <option value="google" className="bg-white dark:bg-gray-900 text-black dark:text-white">Google (Gemini)</option>
+                    <option value="openrouter" className="bg-white dark:bg-gray-900 text-black dark:text-white">OpenRouter (Any)</option>
                  </select>
               </div>
               <div>
@@ -265,7 +291,7 @@ export default function Course() {
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="sk-..."
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black dark:text-white bg-white dark:bg-gray-750"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black dark:text-white bg-white dark:bg-gray-900"
                  />
               </div>
               <button
