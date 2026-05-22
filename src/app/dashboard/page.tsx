@@ -84,18 +84,32 @@ export default function Dashboard() {
     }
   };
 
+  const selectedAssetRef = useRef(selectedAsset);
+  useEffect(() => {
+    selectedAssetRef.current = selectedAsset;
+  }, [selectedAsset]);
+
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   // Real-time polling effect
   useEffect(() => {
     if (!user) return;
     let isCurrent = true;
 
     const intervalId = setInterval(() => {
+      const currentUser = userRef.current;
+      const currentAsset = selectedAssetRef.current;
+      if (!currentUser) return;
+
       // Refresh portfolio silently
-      fetchPortfolio(user.id);
+      fetchPortfolio(currentUser.id);
 
       // Refresh selected asset silently
-      if (selectedAsset) {
-        fetch(`/api/market/quote?symbol=${selectedAsset.symbol}`)
+      if (currentAsset) {
+        fetch(`/api/market/quote?symbol=${currentAsset.symbol}`)
           .then(res => res.json())
           .then(data => {
             if (isCurrent && !data.error) {
@@ -104,13 +118,13 @@ export default function Dashboard() {
           })
           .catch(err => console.error("Real-time quote error:", err));
       }
-    }, 200); // Update every 200ms for ultra real-time feel
+    }, 3000); // Update every 3 seconds for stability and real-time feel
 
     return () => {
       isCurrent = false;
       clearInterval(intervalId);
     };
-  }, [user, selectedAsset]);
+  }, [user?.id]);
 
   // Fetch Option Chain when selected asset tab or selected expiry changes
   const fetchOptionChain = async (symbol: string, expiry: string = '') => {
@@ -132,10 +146,10 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (selectedAsset && activeAssetTab === 'options') {
+    if (selectedAsset?.symbol && activeAssetTab === 'options') {
       fetchOptionChain(selectedAsset.symbol, selectedExpiry);
     }
-  }, [selectedAsset, selectedExpiry, activeAssetTab]);
+  }, [selectedAsset?.symbol, selectedExpiry, activeAssetTab]);
 
   const performSearch = async (query: string) => {
     if (!query.trim()) {
@@ -893,7 +907,7 @@ export default function Dashboard() {
                     )}
                   </button>
                 </div>
-                <span className="text-xs text-gray-450 dark:text-gray-500">Live Syncing 200ms</span>
+                <span className="text-xs text-gray-450 dark:text-gray-500">Live Syncing 3s</span>
               </div>
 
               {/* Tab 1: Holdings Table */}
