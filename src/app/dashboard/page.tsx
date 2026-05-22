@@ -19,6 +19,21 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [portfolio, setPortfolio] = useState<any>(null);
   
+  const userCurrency = portfolio?.currency || 'USD';
+  const exchangeRate = portfolio?.exchangeRate || 83.5;
+
+  const convertAmountFrontend = (amount: number, fromCurrency: string, toCurrency: string) => {
+    if (!amount || fromCurrency === toCurrency) return amount;
+    const rate = exchangeRate;
+    if (fromCurrency === 'USD' && toCurrency === 'INR') {
+      return amount * rate;
+    }
+    if (fromCurrency === 'INR' && toCurrency === 'USD') {
+      return amount / rate;
+    }
+    return amount;
+  };
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -45,6 +60,53 @@ export default function Dashboard() {
   const [modifyingOrder, setModifyingOrder] = useState<any | null>(null);
   const [modifyShares, setModifyShares] = useState<number>(0);
   const [modifyPrice, setModifyPrice] = useState<string>('');
+
+  const currentModifyingOrder = modifyingOrder
+    ? (portfolio?.pendingOrders?.find((o: any) => o.id === modifyingOrder.id) || modifyingOrder)
+    : null;
+
+  const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
+  const prevPriceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (currentModifyingOrder?.currentPrice !== undefined) {
+      const prevPrice = prevPriceRef.current;
+      const currentPrice = currentModifyingOrder.currentPrice;
+      if (prevPrice !== null && prevPrice !== currentPrice) {
+        setPriceFlash(currentPrice > prevPrice ? 'up' : 'down');
+        const timer = setTimeout(() => setPriceFlash(null), 1000);
+        return () => clearTimeout(timer);
+      }
+      prevPriceRef.current = currentPrice;
+    } else {
+      prevPriceRef.current = null;
+    }
+  }, [currentModifyingOrder?.currentPrice]);
+
+  // Keep modifyPrice synced if userCurrency changes while modal is open
+  const prevCurrencyRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prevCurrency = prevCurrencyRef.current;
+    if (prevCurrency && prevCurrency !== userCurrency && modifyingOrder) {
+      setModifyPrice(prev => {
+        const parsed = parseFloat(prev);
+        if (isNaN(parsed) || parsed <= 0) return prev;
+        const converted = convertAmountFrontend(parsed, prevCurrency, userCurrency);
+        return converted.toFixed(2);
+      });
+    }
+    prevCurrencyRef.current = userCurrency;
+  }, [userCurrency, modifyingOrder]);
+
+  // Close modal if the order is executed or cancelled
+  useEffect(() => {
+    if (modifyingOrder && portfolio?.pendingOrders) {
+      const stillPending = portfolio.pendingOrders.some((o: any) => o.id === modifyingOrder.id);
+      if (!stillPending) {
+        setModifyingOrder(null);
+      }
+    }
+  }, [portfolio?.pendingOrders, modifyingOrder]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -222,17 +284,7 @@ export default function Dashboard() {
     }
   };
 
-  const convertAmountFrontend = (amount: number, fromCurrency: string, toCurrency: string) => {
-    if (!amount || fromCurrency === toCurrency) return amount;
-    const rate = portfolio?.exchangeRate || 83.5;
-    if (fromCurrency === 'USD' && toCurrency === 'INR') {
-      return amount * rate;
-    }
-    if (fromCurrency === 'INR' && toCurrency === 'USD') {
-      return amount / rate;
-    }
-    return amount;
-  };
+
 
   const executeTrade = async (type: 'BUY' | 'SELL') => {
     if (!user || !selectedAsset || isExecutingTrade) return;
@@ -319,7 +371,8 @@ export default function Dashboard() {
   };
 
   const submitModifyOrder = async () => {
-    if (!user || !modifyingOrder || isModifyingOrder) return;
+    const activeOrder = currentModifyingOrder || modifyingOrder;
+    if (!user || !activeOrder || isModifyingOrder) return;
     setIsModifyingOrder(true);
 
     if (modifyShares <= 0 || !modifyPrice || parseFloat(modifyPrice) <= 0) {
@@ -333,10 +386,10 @@ export default function Dashboard() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderId: modifyingOrder.id,
+          orderId: activeOrder.id,
           userId: user.id,
           shares: Number(modifyShares),
-          price: convertAmountFrontend(parseFloat(modifyPrice), userCurrency, modifyingOrder.assetCurrency)
+          price: convertAmountFrontend(parseFloat(modifyPrice), userCurrency, activeOrder.assetCurrency)
         })
       });
       const data = await res.json();
@@ -432,8 +485,6 @@ export default function Dashboard() {
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center text-black">Loading...</div>;
 
-  const userCurrency = portfolio?.currency || 'USD';
-  const exchangeRate = portfolio?.exchangeRate || 83.5;
   const startBalance = userCurrency === 'INR' ? (100000.00 * exchangeRate) : 100000.00;
   const netAccountReturn = (portfolio?.totalValue || startBalance) - startBalance;
   const netAccountReturnPct = (netAccountReturn / startBalance) * 100;
@@ -1075,12 +1126,12 @@ export default function Dashboard() {
       </main>
 
       {/* Modify Order Modal */}
-      {modifyingOrder && (
+      {currentModifyingOrder && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-2xl max-w-md w-full overflow-hidden transform transition-all p-6">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Modify Order</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              Modify your pending <span className="font-bold text-blue-600 dark:text-blue-400">{modifyingOrder.order_type === 'STOP_LOSS' ? 'Stop Loss' : 'Limit'}</span> order for <span className="font-bold text-gray-900 dark:text-white">{modifyingOrder.symbol}</span>.
+              Modify your pending <span className="font-bold text-blue-600 dark:text-blue-400">{currentModifyingOrder.order_type === 'STOP_LOSS' ? 'Stop Loss' : 'Limit'}</span> order for <span className="font-bold text-gray-900 dark:text-white">{currentModifyingOrder.symbol}</span>.
             </p>
             
             <div className="space-y-4">
@@ -1108,16 +1159,43 @@ export default function Dashboard() {
                 <label className="block text-xs font-semibold text-gray-450 dark:text-gray-500 uppercase tracking-wider mb-2">
                   Target Price ({userCurrency})
                 </label>
-                <input
-                  type="number"
-                  step="any"
-                  value={modifyPrice}
-                  onChange={(e) => setModifyPrice(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-250 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-bold"
-                />
-                {modifyingOrder.currentPrice !== undefined && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    Current Live Price: <span className="font-semibold text-blue-600 dark:text-blue-400">{formatCurrency(modifyingOrder.currentPrice, userCurrency)}</span>
+                <div className="relative flex items-center">
+                  <input
+                    type="number"
+                    step="any"
+                    value={modifyPrice}
+                    onChange={(e) => setModifyPrice(e.target.value)}
+                    className="w-full pl-4 pr-28 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-250 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-white font-bold"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (currentModifyingOrder?.currentPrice) {
+                        setModifyPrice(currentModifyingOrder.currentPrice.toFixed(2));
+                      }
+                    }}
+                    className="absolute right-2 px-2.5 py-1 text-[10px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-gray-800 dark:hover:bg-gray-750 dark:text-blue-400 border border-blue-200 dark:border-gray-655 rounded-lg transition cursor-pointer"
+                  >
+                    Use Live Price
+                  </button>
+                </div>
+                {currentModifyingOrder.currentPrice !== undefined && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center">
+                    <span>Current Live Price:&nbsp;</span>
+                    <span className={`font-semibold transition-all duration-300 px-1 rounded ${
+                      priceFlash === 'up' 
+                        ? 'text-green-600 bg-green-100 dark:bg-green-900/30 font-bold scale-105' 
+                        : priceFlash === 'down' 
+                        ? 'text-red-600 bg-red-100 dark:bg-red-900/30 font-bold scale-105' 
+                        : 'text-blue-600 dark:text-blue-400'
+                    }`}>
+                      {formatCurrency(currentModifyingOrder.currentPrice, userCurrency)}
+                    </span>
+                    {priceFlash && (
+                      <span className={`ml-1 text-[10px] font-bold ${priceFlash === 'up' ? 'text-green-500 animate-bounce' : 'text-red-500 animate-bounce'}`}>
+                        {priceFlash === 'up' ? '▲' : '▼'}
+                      </span>
+                    )}
                   </p>
                 )}
               </div>
